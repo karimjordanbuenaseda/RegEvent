@@ -1,0 +1,26 @@
+# Git
+.git
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Frontend build artifacts
+frontend/node_modules
+frontend/dist
+
+# Python artifacts
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+backend/.venv
+backend/venv
+.pytest_cache
+
+# IDE and OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
