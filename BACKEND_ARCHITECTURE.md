@@ -10,17 +10,29 @@ This document outlines the updated server-side structure, featuring geographical
 
 ## 2. Data Models
 
-### A. Event Model
-The core entity, now updated with geographical coordinates. 
+### A. User Model
+Represents a web user who can create and manage events (event admin or creator).
 * `id`: UUID (Primary Key)
+* `email`: String (Unique, indexed — used for login)
+* `full_name`: String
+* `hashed_password`: String (bcrypt — never stored as plain text)
+* `role`: Enum (`admin`, `creator`)
+* `is_active`: Boolean
+
+> Table name is explicitly set to `users` to avoid conflict with PostgreSQL's reserved word `user`.
+
+### C. Event Model
+The core entity, now updated with geographical coordinates.
+* `id`: UUID (Primary Key)
+* `owner_id`: UUID (Foreign Key -> User — the creator/admin of the event)
 * `title`: String
 * `slug`: String (Unique URL identifier)
-* `latitude`: Float (For map-based features) 
-* `longitude`: Float (For map-based features) 
+* `latitude`: Float (For map-based features)
+* `longitude`: Float (For map-based features)
 * `is_active`: Boolean
 * `start_date`: DateTime
 
-### B. EventLayout Model
+### D. EventLayout Model
 A dedicated model for the "Dynamic Page Builder" logic. This separates business data from presentation data.
 * `id`: UUID (Primary Key)
 * `event_id`: UUID (Foreign Key -> Event)
@@ -28,7 +40,7 @@ A dedicated model for the "Dynamic Page Builder" logic. This separates business 
 * `structure`: JSONB (Array of component types and their order)
 * `styles`: JSONB (Key-value pairs for CSS variables, colors, and fonts)
 
-### C. Attendee Model
+### E. Attendee Model
 * `id`: UUID
 * `event_id`: UUID (Foreign Key -> Event)
 * `email`: String
@@ -36,7 +48,7 @@ A dedicated model for the "Dynamic Page Builder" logic. This separates business 
 * `check_in_status`: Boolean
 * `has_won`: Boolean
 
-### D. Prize Model
+### F. Prize Model
 * `id`: UUID
 * `event_id`: UUID (Foreign Key -> Event)
 * `title`: String
@@ -47,6 +59,7 @@ A dedicated model for the "Dynamic Page Builder" logic. This separates business 
 
 ## 3. Model Connections (ERD)
 
+* **User (1) <-> Event (N):** A user owns and manages one or more events (`owner_id` FK on Event).
 * **Event (1) <-> EventLayout (1/N):** An event can have one active layout or multiple versioned layouts.
 * **Event (1) <-> Attendee (N):** Standard registration relationship.
 * **Event (1) <-> Prize (N):** Definition of the prize pool for a specific event.

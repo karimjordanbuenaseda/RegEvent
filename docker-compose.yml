@@ -12,7 +12,6 @@ services:
       - web_network
     depends_on:
       - backend
-    restart: unless-stopped
 
   backend:
     build:
@@ -30,7 +29,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    restart: unless-stopped
 
   db:
     build:
@@ -49,7 +47,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
 
 volumes:
   postgres_data:

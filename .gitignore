@@ -221,3 +221,4 @@ __marimo__/
 .claude/
 .github/
 .env
+node_modules/
