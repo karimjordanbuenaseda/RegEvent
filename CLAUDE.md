@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RegEvent is a mobile-first, full-stack web application with these core features:
+RegEvent is a full-stack web application with these core features:
 - **Event registration** — attendees self-register or are imported
 - **Check-in** — QR-code or manual lookup at the door
 - **Raffle draws** — real-time, WebSocket-powered live draws
