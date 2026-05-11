@@ -11,7 +11,7 @@ RegEvent is a mobile-first, full-stack web application with these core features:
 - **Event management** — create and manage events, view attendee lists, export data
 - **Event landing page edits** — simple WYSIWYG editor for event pages
 
-The entire application — frontend and backend — runs as a **single Docker container**. Vite builds the React frontend into a static bundle, which FastAPI serves via `StaticFiles`. There is no separate frontend server in production or in the standard local run.
+The application runs via **Docker Compose** with three services: `frontend` (Vite dev server), `backend` (FastAPI), and `db` (PostgreSQL). Each has its own Dockerfile under `docker/`.
 
 ## Architecture
 
@@ -28,15 +28,15 @@ The entire application — frontend and backend — runs as a **single Docker co
 
 ## Commands
 
-### Run (single container — primary method)
+### Run (Docker Compose — primary method)
 
 ```bash
 docker compose up --build
 ```
 
-This builds the Vite frontend and starts FastAPI serving both the API and static bundle in one container.
+Starts all three services: `frontend` (port 5173), `backend` (port 8000), `db` (PostgreSQL).
 
-### Backend (isolated development only)
+### Backend (outside Docker)
 
 ```bash
 cd backend
@@ -52,13 +52,12 @@ pytest
 pytest tests/test_events.py::test_create_event
 ```
 
-### Frontend (isolated development only)
+### Frontend (outside Docker)
 
 ```bash
 cd frontend
 npm install
-npm run dev        # hot-reload dev server (not used in container)
-npm run build      # produces dist/ copied into Docker image
+npm run dev
 npm run test
 npm run lint
 ```
