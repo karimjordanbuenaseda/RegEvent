@@ -47,6 +47,9 @@ uvicorn app.main:app --reload
 alembic upgrade head
 alembic revision --autogenerate -m "description"
 
+# Seed initial data (idempotent — safe to re-run)
+python seed.py
+
 # Tests
 pytest
 pytest tests/test_events.py::test_create_event

@@ -1,0 +1,52 @@
+[
+  {
+    "id": "10000000-0000-0000-0000-000000000001",
+    "owner_id": "00000000-0000-0000-0000-000000000001",
+    "title": "TechFest Manila 2026",
+    "slug": "techfest-manila-2026",
+    "latitude": 14.5995,
+    "longitude": 120.9842,
+    "is_active": true,
+    "start_date": "2026-06-15T09:00:00"
+  },
+  {
+    "id": "10000000-0000-0000-0000-000000000002",
+    "owner_id": "00000000-0000-0000-0000-000000000002",
+    "title": "Startup Summit BGC",
+    "slug": "startup-summit-bgc-2026",
+    "latitude": 14.5502,
+    "longitude": 121.0485,
+    "is_active": true,
+    "start_date": "2026-07-20T08:00:00"
+  },
+  {
+    "id": "10000000-0000-0000-0000-000000000003",
+    "owner_id": "00000000-0000-0000-0000-000000000003",
+    "title": "Cebu Dev Conference",
+    "slug": "cebu-dev-conf-2026",
+    "latitude": 10.3157,
+    "longitude": 123.8854,
+    "is_active": true,
+    "start_date": "2026-08-10T09:00:00"
+  },
+  {
+    "id": "10000000-0000-0000-0000-000000000004",
+    "owner_id": "00000000-0000-0000-0000-000000000004",
+    "title": "FinTech Forum Makati",
+    "slug": "fintech-forum-makati-2026",
+    "latitude": 14.5547,
+    "longitude": 121.0244,
+    "is_active": true,
+    "start_date": "2026-09-05T10:00:00"
+  },
+  {
+    "id": "10000000-0000-0000-0000-000000000005",
+    "owner_id": "00000000-0000-0000-0000-000000000005",
+    "title": "Davao Innovation Expo",
+    "slug": "davao-innovation-expo-2026",
+    "latitude": 7.1907,
+    "longitude": 125.4553,
+    "is_active": true,
+    "start_date": "2026-10-18T08:30:00"
+  }
+]

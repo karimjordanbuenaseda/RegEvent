@@ -1,0 +1,42 @@
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000001",
+    "email": "admin@regevent.com",
+    "full_name": "System Admin",
+    "role": "admin",
+    "password": "Admin@1234",
+    "is_active": true
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000002",
+    "email": "jane.delacruz@regevent.com",
+    "full_name": "Jane Dela Cruz",
+    "role": "admin",
+    "password": "Admin@5678",
+    "is_active": true
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000003",
+    "email": "marco.santos@regevent.com",
+    "full_name": "Marco Santos",
+    "role": "creator",
+    "password": "Creator@1234",
+    "is_active": true
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000004",
+    "email": "ana.reyes@regevent.com",
+    "full_name": "Ana Reyes",
+    "role": "creator",
+    "password": "Creator@5678",
+    "is_active": true
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000005",
+    "email": "ben.garcia@regevent.com",
+    "full_name": "Ben Garcia",
+    "role": "creator",
+    "password": "Creator@9012",
+    "is_active": true
+  }
+]

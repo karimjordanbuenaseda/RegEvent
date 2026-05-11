@@ -1,0 +1,122 @@
+[
+  {
+    "id": "30000000-0000-0000-0000-000000000001",
+    "event_id": "10000000-0000-0000-0000-000000000001",
+    "email": "miguel.torres@email.com",
+    "ticket_tier": "VIP",
+    "check_in_status": true,
+    "has_won": false
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000002",
+    "event_id": "10000000-0000-0000-0000-000000000001",
+    "email": "sofia.lim@email.com",
+    "ticket_tier": "General",
+    "check_in_status": true,
+    "has_won": false
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000003",
+    "event_id": "10000000-0000-0000-0000-000000000001",
+    "email": "rafael.cruz@email.com",
+    "ticket_tier": "General",
+    "check_in_status": false,
+    "has_won": false
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000004",
+    "event_id": "10000000-0000-0000-0000-000000000002",
+    "email": "isabella.santos@email.com",
+    "ticket_tier": "VIP",
+    "check_in_status": true,
+    "has_won": true
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000005",
+    "event_id": "10000000-0000-0000-0000-000000000002",
+    "email": "lucas.ramos@email.com",
+    "ticket_tier": "General",
+    "check_in_status": true,
+    "has_won": false
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000006",
+    "event_id": "10000000-0000-0000-0000-000000000002",
+    "email": "camille.flores@email.com",
+    "ticket_tier": "VIP",
+    "check_in_status": false,
+    "has_won": false
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000007",
+    "event_id": "10000000-0000-0000-0000-000000000003",
+    "email": "andrei.navarro@email.com",
+    "ticket_tier": "General",
+    "check_in_status": true,
+    "has_won": false
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000008",
+    "event_id": "10000000-0000-0000-0000-000000000003",
+    "email": "patricia.dizon@email.com",
+    "ticket_tier": "General",
+    "check_in_status": true,
+    "has_won": false
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000009",
+    "event_id": "10000000-0000-0000-0000-000000000003",
+    "email": "jerome.villanueva@email.com",
+    "ticket_tier": "VIP",
+    "check_in_status": false,
+    "has_won": false
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000010",
+    "event_id": "10000000-0000-0000-0000-000000000004",
+    "email": "kristine.aquino@email.com",
+    "ticket_tier": "VIP",
+    "check_in_status": true,
+    "has_won": false
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000011",
+    "event_id": "10000000-0000-0000-0000-000000000004",
+    "email": "david.mendoza@email.com",
+    "ticket_tier": "General",
+    "check_in_status": true,
+    "has_won": false
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000012",
+    "event_id": "10000000-0000-0000-0000-000000000004",
+    "email": "patricia.dela-rosa@email.com",
+    "ticket_tier": "General",
+    "check_in_status": false,
+    "has_won": false
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000013",
+    "event_id": "10000000-0000-0000-0000-000000000005",
+    "email": "carlo.bautista@email.com",
+    "ticket_tier": "VIP",
+    "check_in_status": true,
+    "has_won": false
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000014",
+    "event_id": "10000000-0000-0000-0000-000000000005",
+    "email": "maricel.abad@email.com",
+    "ticket_tier": "General",
+    "check_in_status": true,
+    "has_won": false
+  },
+  {
+    "id": "30000000-0000-0000-0000-000000000015",
+    "event_id": "10000000-0000-0000-0000-000000000005",
+    "email": "ryan.pascual@email.com",
+    "ticket_tier": "General",
+    "check_in_status": false,
+    "has_won": false
+  }
+]
