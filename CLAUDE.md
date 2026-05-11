@@ -11,7 +11,7 @@ RegEvent is a mobile-first, full-stack web application with these core features:
 - **Event management** — create and manage events, view attendee lists, export data
 - **Event landing page edits** — simple WYSIWYG editor for event pages
 
-It is deployed as a single Docker container: Vite builds the React frontend into a static bundle, which FastAPI serves via `StaticFiles`.
+The entire application — frontend and backend — runs as a **single Docker container**. Vite builds the React frontend into a static bundle, which FastAPI serves via `StaticFiles`. There is no separate frontend server in production or in the standard local run.
 
 ## Architecture
 
@@ -28,7 +28,15 @@ It is deployed as a single Docker container: Vite builds the React frontend into
 
 ## Commands
 
-### Backend
+### Run (single container — primary method)
+
+```bash
+docker compose up --build
+```
+
+This builds the Vite frontend and starts FastAPI serving both the API and static bundle in one container.
+
+### Backend (isolated development only)
 
 ```bash
 cd backend
@@ -44,22 +52,15 @@ pytest
 pytest tests/test_events.py::test_create_event
 ```
 
-### Frontend
+### Frontend (isolated development only)
 
 ```bash
 cd frontend
 npm install
-npm run dev        # dev server
-npm run build      # production build
-npm run preview    # preview production build
+npm run dev        # hot-reload dev server (not used in container)
+npm run build      # produces dist/ copied into Docker image
 npm run test
 npm run lint
-```
-
-### Full Stack
-
-```bash
-docker compose up --build
 ```
 
 ## Conventions
@@ -70,6 +71,7 @@ docker compose up --build
 - One router file per resource under `backend/app/routers/` (`events.py`, `attendees.py`, `raffle.py`).
 - Use `async def` for I/O-bound endpoints; use `asyncpg` as the async PostgreSQL driver.
 - Inject database sessions via `Depends(get_session)`.
+- Use [BACKEND_ARCHITECTURE.md](BACKEND_ARCHITECTURE.md) as primary source of truth for backend related items.
 
 ### Frontend
 
