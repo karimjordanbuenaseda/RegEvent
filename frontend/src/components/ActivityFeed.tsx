@@ -5,7 +5,9 @@ import type { ActivityItem } from '../api/activity'
 const POLL_INTERVAL = 15_000
 
 function timeAgo(iso: string): string {
-  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  // Append Z if no timezone offset is present so the browser treats it as UTC
+  const utc = /[Z+\-]\d{2}:?\d{2}$|Z$/.test(iso) ? iso : iso + 'Z'
+  const diff = Math.floor((Date.now() - new Date(utc).getTime()) / 1000)
   if (diff < 60) return 'just now'
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
