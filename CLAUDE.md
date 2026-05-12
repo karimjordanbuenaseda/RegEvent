@@ -73,7 +73,7 @@ npm run lint
 - One router file per resource under `backend/app/routers/` (`events.py`, `attendees.py`, `raffle.py`).
 - Use `async def` for I/O-bound endpoints; use `asyncpg` as the async PostgreSQL driver.
 - Inject database sessions via `Depends(get_session)`.
-- Use [BACKEND_ARCHITECTURE.md](BACKEND_ARCHITECTURE.md) as primary source of truth for backend related items.
+- Use [BACKEND_ARCHITECTURE](BACKEND_ARCHITECTURE.md) as primary source of truth for backend related items.
 
 ### Frontend
 
@@ -82,6 +82,7 @@ npm run lint
 - Tailwind utility classes only — no custom CSS files unless strictly necessary.
 - Centralize API calls under `frontend/src/api/` using `fetch` or a thin Axios wrapper.
 - TypeScript strict mode (`"strict": true` in `tsconfig.json`).
+- Use [FRONTEND_ARCHITECTURE](FRONTEND_ARCHITECTURE.md) as primary source of truth for frontend related items.
 
 ### Commits
 
