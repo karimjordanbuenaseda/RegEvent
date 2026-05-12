@@ -1,7 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchMyEvents } from '../api/events'
+import { useEventsStore } from '../store/eventsStore'
 import EventCard from './EventCard'
+
+const POLL_INTERVAL = 30_000
 
 function SkeletonCard() {
   return (
@@ -25,11 +27,13 @@ function SkeletonCard() {
 
 export default function EventsGrid() {
   const navigate = useNavigate()
-  const { data: events, isLoading, isError } = useQuery({
-    queryKey: ['my-events'],
-    queryFn: fetchMyEvents,
-    refetchInterval: 30_000,
-  })
+  const { events, isLoading, error, fetch } = useEventsStore()
+
+  useEffect(() => {
+    fetch()
+    const id = setInterval(fetch, POLL_INTERVAL)
+    return () => clearInterval(id)
+  }, [fetch])
 
   return (
     <div className="flex flex-col gap-4">
@@ -44,15 +48,15 @@ export default function EventsGrid() {
         </button>
       </div>
 
-      {isError ? (
+      {error ? (
         <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">
           Could not load events.
         </div>
-      ) : isLoading ? (
+      ) : isLoading && events.length === 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
-      ) : events?.length === 0 ? (
+      ) : events.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
           <p className="text-gray-400 text-sm">No events yet.</p>
           <button
@@ -64,7 +68,7 @@ export default function EventsGrid() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {events?.map((event) => <EventCard key={event.id} event={event} />)}
+          {events.map((event) => <EventCard key={event.id} event={event} />)}
         </div>
       )}
 

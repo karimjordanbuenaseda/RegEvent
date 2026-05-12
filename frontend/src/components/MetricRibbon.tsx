@@ -1,5 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
-import { fetchDashboardStats } from '../api/stats'
+import { useEffect } from 'react'
+import { useStatsStore } from '../store/statsStore'
+
+const POLL_INTERVAL = 30_000
 
 interface MetricCardProps {
   label: string
@@ -27,13 +29,15 @@ function MetricCard({ label, value, subtext, isLoading, accentColor }: MetricCar
 }
 
 export default function MetricRibbon() {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['dashboard-stats'],
-    queryFn: fetchDashboardStats,
-    refetchInterval: 30_000,
-  })
+  const { stats, isLoading, error, fetch } = useStatsStore()
 
-  if (isError) {
+  useEffect(() => {
+    fetch()
+    const id = setInterval(fetch, POLL_INTERVAL)
+    return () => clearInterval(id)
+  }, [fetch])
+
+  if (error) {
     return (
       <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">
         Could not load dashboard stats.
@@ -45,21 +49,21 @@ export default function MetricRibbon() {
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <MetricCard
         label="Total Live Events"
-        value={data?.total_live_events}
+        value={stats?.total_live_events}
         subtext="events currently active"
         isLoading={isLoading}
         accentColor="bg-brand-primary"
       />
       <MetricCard
         label="Total Attendees"
-        value={data?.total_attendees}
+        value={stats?.total_attendees}
         subtext="registered across all events"
         isLoading={isLoading}
         accentColor="bg-brand-accent"
       />
       <MetricCard
         label="Prizes Awarded"
-        value={data?.total_prizes_awarded}
+        value={stats?.total_prizes_awarded}
         subtext="winners from raffle draws"
         isLoading={isLoading}
         accentColor="bg-brand-card"
