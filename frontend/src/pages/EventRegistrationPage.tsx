@@ -1,25 +1,32 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import QRCode from 'react-qr-code'
 import { getEventBySlug } from '../api/events'
 import type { EventBase } from '../api/events'
 import { getLayoutsForEvent } from '../api/eventLayouts'
-import type { EventLayout } from '../api/eventLayouts'
+import type { EventLayout, ComponentType } from '../api/eventLayouts'
 import { registerAttendee } from '../api/attendees'
 import type { Attendee, TicketTier } from '../api/attendees'
 
 const DEFAULT_PRIMARY = '#81A6C6'
 const DEFAULT_ACCENT = '#AACDDC'
 
-type PageState = 'loading' | 'form' | 'submitting' | 'success' | 'inactive' | 'not_found' | 'error'
+// ─── countdown helper ─────────────────────────────────────────────────────────
 
-function HeroSection({
-  event,
-  layout,
-}: {
-  event: EventBase
-  layout: EventLayout | null
-}) {
+function getTimeLeft(dateStr: string) {
+  const diff = Math.max(0, new Date(dateStr).getTime() - Date.now())
+  return {
+    days: Math.floor(diff / 86_400_000),
+    hours: Math.floor((diff % 86_400_000) / 3_600_000),
+    mins: Math.floor((diff % 3_600_000) / 60_000),
+    secs: Math.floor((diff % 60_000) / 1_000),
+    started: diff === 0,
+  }
+}
+
+// ─── hero ─────────────────────────────────────────────────────────────────────
+
+function HeroSection({ event, layout }: { event: EventBase; layout: EventLayout | null }) {
   const primary = layout?.styles?.primary ?? DEFAULT_PRIMARY
   const accent = layout?.styles?.accent ?? DEFAULT_ACCENT
 
@@ -49,6 +56,77 @@ function HeroSection({
   )
 }
 
+// ─── countdown ────────────────────────────────────────────────────────────────
+
+function CountdownSection({ event, layout }: { event: EventBase; layout: EventLayout | null }) {
+  const primary = layout?.styles?.primary ?? DEFAULT_PRIMARY
+  const [time, setTime] = useState(() => getTimeLeft(event.start_date))
+
+  useEffect(() => {
+    const id = setInterval(() => setTime(getTimeLeft(event.start_date)), 1000)
+    return () => clearInterval(id)
+  }, [event.start_date])
+
+  return (
+    <div className="w-full px-6 py-5 flex flex-col items-center gap-3 bg-white border-b border-gray-100">
+      <p className="text-xs uppercase tracking-wider text-gray-400">
+        {time.started ? 'Event has started!' : 'Event starts in'}
+      </p>
+      {!time.started && (
+        <div className="flex items-end gap-3">
+          {(
+            [
+              ['Days', time.days],
+              ['Hours', time.hours],
+              ['Mins', time.mins],
+              ['Secs', time.secs],
+            ] as [string, number][]
+          ).map(([label, val]) => (
+            <div key={label} className="flex flex-col items-center gap-1">
+              <div
+                className="w-12 h-12 rounded-lg flex items-center justify-center text-white text-base font-bold tabular-nums"
+                style={{ backgroundColor: primary }}
+              >
+                {String(val).padStart(2, '0')}
+              </div>
+              <span className="text-[10px] text-gray-400">{label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── map ──────────────────────────────────────────────────────────────────────
+
+function MapSection({ event }: { event: EventBase }) {
+  if (!event.latitude || !event.longitude) {
+    return (
+      <div className="w-full h-40 bg-gray-100 flex items-center justify-center border-b border-gray-100">
+        <p className="text-xs text-gray-400">No location set for this event.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="w-full border-b border-gray-100">
+      <iframe
+        src={`https://maps.google.com/maps?q=${event.latitude},${event.longitude}&z=15&output=embed`}
+        width="100%"
+        height="240"
+        style={{ border: 0, display: 'block' }}
+        allowFullScreen
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        title="Event Location"
+      />
+    </div>
+  )
+}
+
+// ─── registration form ────────────────────────────────────────────────────────
+
 function RegistrationForm({
   event,
   layout,
@@ -59,7 +137,6 @@ function RegistrationForm({
   onSuccess: (attendee: Attendee) => void
 }) {
   const primary = layout?.styles?.primary ?? DEFAULT_PRIMARY
-
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [ticketTier, setTicketTier] = useState<TicketTier>('General')
@@ -86,75 +163,91 @@ function RegistrationForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-          Full Name <span className="text-gray-400 font-normal">(optional)</span>
-        </label>
-        <input
-          type="text"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          placeholder="Juan dela Cruz"
-          className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition"
-          style={{ '--tw-ring-color': primary } as React.CSSProperties}
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-          Email <span className="text-red-400">*</span>
-        </label>
-        <input
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
-          className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition"
-          style={{ '--tw-ring-color': primary } as React.CSSProperties}
-        />
-        <p className="mt-1.5 text-xs text-gray-400">Your check-in link will be sent here.</p>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Ticket Tier</label>
-        <div className="flex gap-3">
-          {(['General', 'VIP'] as TicketTier[]).map((tier) => (
-            <button
-              key={tier}
-              type="button"
-              onClick={() => setTicketTier(tier)}
-              className="flex-1 py-2.5 rounded-lg border text-sm font-medium transition-all"
-              style={
-                ticketTier === tier
-                  ? { backgroundColor: primary, borderColor: primary, color: '#fff' }
-                  : { borderColor: '#e5e7eb', color: '#6b7280', backgroundColor: '#fff' }
-              }
-            >
-              {tier}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {error && (
-        <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-3.5 py-2.5">
-          {error}
+    <div className="bg-white px-6 py-7">
+      <div className="mb-5">
+        <h2 className="text-lg font-bold text-gray-900">Register</h2>
+        <p className="text-sm text-gray-400 mt-0.5">
+          {new Date(event.start_date).toLocaleDateString('en-PH', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+          })}
         </p>
-      )}
+      </div>
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="w-full py-3 rounded-xl text-white text-sm font-semibold tracking-wide transition-opacity disabled:opacity-60"
-        style={{ backgroundColor: primary }}
-      >
-        {submitting ? 'Registering…' : 'Register Now'}
-      </button>
-    </form>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Full Name <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <input
+            type="text"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Juan dela Cruz"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition"
+            style={{ '--tw-ring-color': primary } as React.CSSProperties}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Email <span className="text-red-400">*</span>
+          </label>
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-opacity-30 transition"
+            style={{ '--tw-ring-color': primary } as React.CSSProperties}
+          />
+          <p className="mt-1.5 text-xs text-gray-400">Your check-in link will be sent here.</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Ticket Tier</label>
+          <div className="flex gap-3">
+            {(['General', 'VIP'] as TicketTier[]).map((tier) => (
+              <button
+                key={tier}
+                type="button"
+                onClick={() => setTicketTier(tier)}
+                className="flex-1 py-2.5 rounded-lg border text-sm font-medium transition-all"
+                style={
+                  ticketTier === tier
+                    ? { backgroundColor: primary, borderColor: primary, color: '#fff' }
+                    : { borderColor: '#e5e7eb', color: '#6b7280', backgroundColor: '#fff' }
+                }
+              >
+                {tier}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {error && (
+          <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-3.5 py-2.5">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className="w-full py-3 rounded-xl text-white text-sm font-semibold tracking-wide transition-opacity disabled:opacity-60"
+          style={{ backgroundColor: primary }}
+        >
+          {submitting ? 'Registering…' : 'Register Now'}
+        </button>
+      </form>
+    </div>
   )
 }
+
+// ─── success state ────────────────────────────────────────────────────────────
 
 function SuccessState({
   event,
@@ -169,7 +262,7 @@ function SuccessState({
   const checkinUrl = `${window.location.origin}/events/${event.slug}/checkin/${attendee.id}`
 
   return (
-    <div className="flex flex-col items-center gap-6 text-center">
+    <div className="bg-white px-6 py-7 flex flex-col items-center gap-6 text-center">
       <div
         className="w-12 h-12 rounded-full flex items-center justify-center"
         style={{ backgroundColor: primary }}
@@ -187,12 +280,7 @@ function SuccessState({
       </div>
 
       <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-        <QRCode
-          value={checkinUrl}
-          size={180}
-          fgColor="#1f2937"
-          bgColor="#ffffff"
-        />
+        <QRCode value={checkinUrl} size={180} fgColor="#1f2937" bgColor="#ffffff" />
       </div>
 
       <div className="flex flex-col gap-1 text-center">
@@ -215,6 +303,10 @@ function SuccessState({
     </div>
   )
 }
+
+// ─── page ─────────────────────────────────────────────────────────────────────
+
+type PageState = 'loading' | 'form' | 'success' | 'inactive' | 'not_found'
 
 export default function EventRegistrationPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -244,59 +336,69 @@ export default function EventRegistrationPage() {
     load()
   }, [slug])
 
+  // Ordered component list from layout; always ensure registration_form is present
+  const structure = useMemo((): ComponentType[] => {
+    const s = layout?.structure ?? []
+    if (s.length === 0) return ['hero', 'registration_form']
+    if (!s.includes('registration_form')) return [...s, 'registration_form']
+    return s
+  }, [layout])
+
   const primary = layout?.styles?.primary ?? DEFAULT_PRIMARY
+  const accent = layout?.styles?.accent ?? DEFAULT_ACCENT
+
+  function renderComponent(type: ComponentType) {
+    if (!event) return null
+    switch (type) {
+      case 'hero':
+        return <HeroSection key="hero" event={event} layout={layout} />
+      case 'registration_form':
+        if (pageState === 'success' && attendee) {
+          return <SuccessState key="form" event={event} layout={layout} attendee={attendee} />
+        }
+        return (
+          <RegistrationForm
+            key="form"
+            event={event}
+            layout={layout}
+            onSuccess={(a) => {
+              setAttendee(a)
+              setPageState('success')
+            }}
+          />
+        )
+      case 'countdown':
+        return <CountdownSection key="countdown" event={event} layout={layout} />
+      case 'map':
+        return <MapSection key="map" event={event} />
+      default:
+        return null
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center pb-16">
       <div className="w-full max-w-md shadow-lg overflow-hidden" style={{ marginTop: '5vh' }}>
-        {/* Hero */}
-        {(pageState === 'loading' || event) && (
-          <>
-            {event ? (
-              <HeroSection event={event} layout={layout} />
-            ) : (
-              <div className="h-52 w-full bg-gray-200 animate-pulse" />
-            )}
-          </>
-        )}
 
-        {/* Card body */}
-        <div className="bg-white px-6 py-7">
-          {pageState === 'loading' && (
-            <div className="flex flex-col gap-3 animate-pulse">
+        {pageState === 'loading' && (
+          <>
+            <div className="h-52 w-full bg-gray-200 animate-pulse" />
+            <div className="bg-white px-6 py-7 flex flex-col gap-3 animate-pulse">
               <div className="h-4 bg-gray-100 rounded w-2/3" />
               <div className="h-4 bg-gray-100 rounded w-1/2" />
               <div className="h-10 bg-gray-100 rounded-lg mt-2" />
             </div>
-          )}
+          </>
+        )}
 
-          {pageState === 'form' && event && (
-            <>
-              <div className="mb-5">
-                <h2 className="text-lg font-bold text-gray-900">Register</h2>
-                <p className="text-sm text-gray-400 mt-0.5">
-                  {new Date(event.start_date).toLocaleDateString('en-PH', {
-                    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
-                  })}
-                </p>
-              </div>
-              <RegistrationForm
-                event={event}
-                layout={layout}
-                onSuccess={(a) => {
-                  setAttendee(a)
-                  setPageState('success')
-                }}
-              />
-            </>
-          )}
+        {(pageState === 'form' || pageState === 'success') && event && (
+          structure.map((type) => renderComponent(type))
+        )}
 
-          {pageState === 'success' && event && attendee && (
-            <SuccessState event={event} layout={layout} attendee={attendee} />
-          )}
-
-          {pageState === 'inactive' && event && (
-            <div className="flex flex-col items-center gap-3 py-6 text-center">
+        {pageState === 'inactive' && event && (
+          <>
+            <HeroSection event={event} layout={layout} />
+            <div className="bg-white px-6 py-7 flex flex-col items-center gap-3 text-center">
               <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
                 <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
@@ -309,19 +411,19 @@ export default function EventRegistrationPage() {
                 </p>
               </div>
             </div>
-          )}
+          </>
+        )}
 
-          {pageState === 'not_found' && (
-            <div className="flex flex-col items-center gap-3 py-6 text-center">
-              <p className="text-gray-500 text-sm">This event could not be found.</p>
-            </div>
-          )}
-        </div>
+        {pageState === 'not_found' && (
+          <div className="bg-white px-6 py-12 flex flex-col items-center gap-3 text-center">
+            <p className="text-gray-500 text-sm">This event could not be found.</p>
+          </div>
+        )}
 
         {/* Footer brand strip */}
         <div
           className="h-1 w-full"
-          style={{ background: `linear-gradient(to right, ${primary}, ${layout?.styles?.accent ?? DEFAULT_ACCENT})` }}
+          style={{ background: `linear-gradient(to right, ${primary}, ${accent})` }}
         />
       </div>
     </div>
