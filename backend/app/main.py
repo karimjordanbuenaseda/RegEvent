@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import init_db
-from app.routers import events, attendees, raffle, event_layouts, users, auth, stats
+from app.routers import events, attendees, raffle, event_layouts, users, auth, stats, activity
 
 
 @asynccontextmanager
@@ -24,6 +24,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(stats.router)
+app.include_router(activity.router)
 app.include_router(users.router)
 app.include_router(events.router)
 app.include_router(event_layouts.router)

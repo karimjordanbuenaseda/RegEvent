@@ -1,4 +1,5 @@
 from uuid import UUID
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -29,6 +30,7 @@ async def check_in(attendee_id: UUID, session: AsyncSession = Depends(get_sessio
     if not attendee:
         raise HTTPException(status_code=404, detail="Attendee not found")
     attendee.check_in_status = True
+    attendee.checked_in_at = datetime.utcnow()
     await session.commit()
     await session.refresh(attendee)
     return attendee
