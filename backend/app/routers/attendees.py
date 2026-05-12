@@ -62,6 +62,15 @@ async def register_attendee(
     return attendee
 
 
+@router.get("/{attendee_id}", response_model=Attendee)
+async def get_attendee(attendee_id: UUID, session: AsyncSession = Depends(get_session)):
+    result = await session.execute(select(Attendee).where(Attendee.id == attendee_id))
+    attendee = result.scalars().first()
+    if not attendee:
+        raise HTTPException(status_code=404, detail="Attendee not found")
+    return attendee
+
+
 @router.patch("/{attendee_id}/check-in", response_model=Attendee)
 async def check_in(attendee_id: UUID, session: AsyncSession = Depends(get_session)):
     result = await session.execute(select(Attendee).where(Attendee.id == attendee_id))
