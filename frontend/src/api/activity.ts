@@ -7,6 +7,11 @@ export interface ActivityItem {
   timestamp: string
 }
 
-export function fetchRecentActivity(): Promise<ActivityItem[]> {
-  return apiFetch<ActivityItem[]>('/activity/recent')
+export interface ActivityPage {
+  items: ActivityItem[]
+  has_next: boolean
+}
+
+export function fetchRecentActivity(page: number, limit = 15): Promise<ActivityPage> {
+  return apiFetch<ActivityPage>(`/activity/recent?page=${page}&limit=${limit}`)
 }

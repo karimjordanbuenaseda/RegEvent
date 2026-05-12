@@ -16,7 +16,7 @@ function ActivityRow({ item }: { item: ActivityItem }) {
   const isCheckIn = item.type === 'check_in'
   return (
     <div className="flex items-start gap-3 py-3 border-b border-gray-50 last:border-0">
-      <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs ${
+      <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
         isCheckIn ? 'bg-green-100 text-green-600' : 'bg-brand-accent/30 text-brand-primary'
       }`}>
         {isCheckIn ? '✓' : '+'}
@@ -47,13 +47,13 @@ function SkeletonRow() {
 }
 
 export default function ActivityFeed() {
-  const { items, isLoading, error, fetch } = useActivityStore()
+  const { items, page, hasNext, isLoading, error, fetchPage, nextPage, prevPage } = useActivityStore()
 
   useEffect(() => {
-    fetch()
-    const id = setInterval(fetch, POLL_INTERVAL)
+    fetchPage(page)
+    const id = setInterval(() => fetchPage(page), POLL_INTERVAL)
     return () => clearInterval(id)
-  }, [fetch])
+  }, [fetchPage, page])
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col gap-3">
@@ -62,17 +62,35 @@ export default function ActivityFeed() {
         <h2 className="text-base font-semibold text-gray-800">Live Activity</h2>
       </div>
 
-      {error ? (
-        <p className="text-sm text-red-500 py-2">Could not load activity.</p>
-      ) : isLoading && items.length === 0 ? (
-        <div>
-          {Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
-        </div>
-      ) : items.length === 0 ? (
-        <p className="text-sm text-gray-400 py-4 text-center">No recent activity.</p>
-      ) : (
-        <div>
-          {items.map((item, i) => <ActivityRow key={i} item={item} />)}
+      <div className="flex-1">
+        {error ? (
+          <p className="text-sm text-red-500 py-2">Could not load activity.</p>
+        ) : isLoading && items.length === 0 ? (
+          <div>{Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}</div>
+        ) : items.length === 0 ? (
+          <p className="text-sm text-gray-400 py-4 text-center">No recent activity.</p>
+        ) : (
+          <div>{items.map((item, i) => <ActivityRow key={i} item={item} />)}</div>
+        )}
+      </div>
+
+      {(page > 1 || hasNext) && (
+        <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+          <button
+            onClick={prevPage}
+            disabled={page === 1 || isLoading}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            ← Prev
+          </button>
+          <span className="text-xs text-gray-400">Page {page}</span>
+          <button
+            onClick={nextPage}
+            disabled={!hasNext || isLoading}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Next →
+          </button>
         </div>
       )}
     </div>
