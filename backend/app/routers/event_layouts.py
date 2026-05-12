@@ -1,12 +1,21 @@
-from uuid import UUID
 from typing import Optional
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import SQLModel, select
+
 from app.database import get_session
 from app.models.event_layout import EventLayout
 
 router = APIRouter(prefix="/event-layouts", tags=["event-layouts"])
+
+
+class LayoutUpdate(SQLModel):
+    layout_name: Optional[str] = None
+    structure: Optional[list] = None
+    styles: Optional[dict] = None
+    cover_image_url: Optional[str] = None
 
 
 @router.post("/", response_model=EventLayout, status_code=201)
@@ -28,21 +37,15 @@ async def list_layouts(event_id: UUID, session: AsyncSession = Depends(get_sessi
 @router.patch("/{layout_id}", response_model=EventLayout)
 async def update_layout(
     layout_id: UUID,
-    layout_name: Optional[str] = None,
-    structure: Optional[list] = None,
-    styles: Optional[dict] = None,
+    payload: LayoutUpdate,
     session: AsyncSession = Depends(get_session),
 ):
     result = await session.execute(select(EventLayout).where(EventLayout.id == layout_id))
     layout = result.scalars().first()
     if not layout:
         raise HTTPException(status_code=404, detail="Layout not found")
-    if layout_name is not None:
-        layout.layout_name = layout_name
-    if structure is not None:
-        layout.structure = structure
-    if styles is not None:
-        layout.styles = styles
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(layout, key, value)
     await session.commit()
     await session.refresh(layout)
     return layout

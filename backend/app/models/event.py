@@ -26,3 +26,6 @@ class EventWithStats(SQLModel):
     start_date: datetime
     total_attendees: int
     checked_in_count: int
+    cover_image_url: Optional[str] = None
+    primary_color: Optional[str] = None
+    accent_color: Optional[str] = None
