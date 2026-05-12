@@ -3,30 +3,21 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import DashboardPage from './pages/DashboardPage'
+import TopNav from './components/TopNav'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
   return token ? <>{children}</> : <Navigate to="/login" replace />
 }
 
-function Dashboard() {
-  const user = useAuthStore((s) => s.user)
-  const logout = useAuthStore((s) => s.logout)
+function ProfilePage() {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
-      <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-      {user && (
-        <p className="text-gray-600 text-sm">
-          Welcome, {user.full_name} ({user.role})
-        </p>
-      )}
-      <p className="text-gray-400 text-sm">Coming soon</p>
-      <button
-        onClick={logout}
-        className="text-sm text-red-600 hover:underline"
-      >
-        Sign out
-      </button>
+    <div className="min-h-screen bg-gray-50">
+      <TopNav />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <p className="text-sm text-gray-400">Profile coming soon</p>
+      </main>
     </div>
   )
 }
@@ -47,7 +38,15 @@ function AppRoutes() {
           path="/"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />
