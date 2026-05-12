@@ -1,92 +1,201 @@
-# CLAUDE.md
+# RegEvent
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+A mobile-first, full-stack web application for event registration, attendee check-in, and real-time raffle draws.
 
-## Project Overview
+## Features
 
-RegEvent is a full-stack web application with these core features:
-- **Event registration** — attendees self-register or are imported
-- **Check-in** — QR-code or manual lookup at the door
-- **Raffle draws** — real-time, WebSocket-powered live draws
-- **Event management** — create and manage events, view attendee lists, export data
-- **Event landing page edits** — simple WYSIWYG editor for event pages
+- **Event management** — create events, customize landing pages, and manage attendee lists
+- **Self-registration** — attendees register via a public event page and receive a check-in email with a personalized link
+- **Check-in** — scan a QR code or look up attendees manually at the door
+- **Live raffle draws** — real-time WebSocket-powered draws with weighted ticket tiers (VIP gets 3× the chance)
+- **Dashboard** — per-user metrics, live event counts, and a paginated activity feed
 
-The application runs via **Docker Compose** with four services: `frontend` (Vite dev server), `backend` (FastAPI), `db` (PostgreSQL), and `minio` (object storage for event images). Each has its own Dockerfile under `docker/`.
+---
 
-## Architecture
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, Vite, TypeScript, Tailwind CSS |
+| State management | Zustand, TanStack Query |
+| Backend | Python 3.12, FastAPI, SQLModel |
+| Database | PostgreSQL (async via asyncpg) |
+| Object storage | MinIO (S3-compatible, for event cover images) |
+| Auth | JWT (HS256, 8-hour expiry), bcrypt passwords |
+| Migrations | Alembic |
+| Dev email | Mailpit (local SMTP catch-all) |
+| Containerization | Docker Compose (6 services) |
+
+---
+
+## Project Structure
 
 ```
-/frontend     React 18 + Vite + TypeScript + Tailwind CSS
-/backend      Python 3.10+ FastAPI + SQLModel + PostgreSQL
-/docker       Multi-stage Dockerfiles and compose configs
+/backend          FastAPI application
+  app/
+    routers/      One file per resource (events, attendees, raffle, …)
+    models/       SQLModel table definitions
+    services/     Email (aiosmtplib) and storage (MinIO) helpers
+  alembic/        Migration scripts
+  seed.py         Idempotent dev-data seeder
+
+/frontend         Vite + React application
+  src/
+    api/          Centralized fetch/Axios wrappers
+    components/   Shared UI components (PascalCase)
+    pages/        Route-level page components
+    store/        Zustand stores
+
+/docker           Dockerfiles for each service
 ```
 
-- Real-time raffle uses **FastAPI WebSockets** (Starlette native) — not Socket.IO.
-- Event images are stored in **MinIO** (S3-compatible). Backend uploads via `minio:9000` (internal Docker); browser fetches images from `http://localhost:9000` (exposed port). The bucket `regevent` is created automatically with public-read policy on first startup.
-- Database concurrency for raffle draw integrity uses **PostgreSQL row-level locking** (`SELECT FOR UPDATE`), not application-level locking.
-- UUIDs are the primary key type for events and attendees.
-- Migrations are managed by **Alembic**.
+---
 
-## Commands
+## Getting Started
 
-### Run (Docker Compose — primary method)
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (includes Compose)
+- A `.env` file in the project root (copy from `.env.example` and fill in the values)
+
+### Run with Docker Compose (recommended)
 
 ```bash
 docker compose up --build
 ```
 
-Starts all three services: `frontend` (port 5173), `backend` (port 8000), `db` (PostgreSQL).
+| Service | URL | Notes |
+|---|---|---|
+| Frontend | http://localhost:5173 | Vite dev server with HMR |
+| Backend API | http://localhost:8000 | FastAPI + auto-reload |
+| API docs | http://localhost:8000/docs | Swagger UI |
+| MinIO console | http://localhost:9001 | Object storage admin UI |
+| Mailpit | http://localhost:8025 | Catches all outbound emails in dev |
 
-### Backend (outside Docker)
+The `regevent` MinIO bucket is created automatically with a public-read policy on first startup.
+
+### Seed development data
+
+```bash
+# Inside the running backend container
+docker compose exec backend python seed.py
+```
+
+The seeder is idempotent — safe to re-run.
+
+---
+
+## Backend
+
+### Running locally (without Docker)
 
 ```bash
 cd backend
 pip install -r requirements.txt
-uvicorn app.main:app --reload
 
-# Migrations
+# Apply migrations
 alembic upgrade head
-alembic revision --autogenerate -m "description"
 
-# Seed initial data (idempotent — safe to re-run)
-python seed.py
+# Start the server
+uvicorn app.main:app --reload
+```
 
-# Tests
+### Database migrations
+
+```bash
+# Apply all pending migrations
+alembic upgrade head
+
+# Generate a new migration after changing models
+alembic revision --autogenerate -m "short description"
+```
+
+### Tests
+
+```bash
 pytest
+# Run a specific test
 pytest tests/test_events.py::test_create_event
 ```
 
-### Frontend (outside Docker)
+### API overview
+
+| Router | Prefix | Highlights |
+|---|---|---|
+| Auth | `/auth` | `POST /login` (OAuth2 form), `GET /me` |
+| Events | `/events` | CRUD; `GET /me` returns stats joined from layout + attendees |
+| Attendees | `/attendees` | Register, look up by ID, `PATCH /{id}/check-in` |
+| Raffle | `/raffle` | `POST /{event_id}/draw` — atomic, row-locked weighted draw |
+| Event Layouts | `/event-layouts` | CRUD for page builder structure and styles (JSONB) |
+| Uploads | `/uploads` | `POST /events/{id}/cover` — image upload to MinIO (max 5 MB) |
+| Stats | `/stats` | `GET /dashboard` — aggregate counts for the current user |
+| Activity | `/activity` | `GET /recent` — paginated registration + check-in feed |
+| Users | `/users` | CRUD; `PATCH /me`, `PATCH /me/password` |
+
+See [BACKEND_ARCHITECTURE.md](BACKEND_ARCHITECTURE.md) for full model and flow details.
+
+### Environment variables (backend)
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | asyncpg connection string |
+| `SECRET_KEY` | JWT signing secret |
+| `MINIO_ENDPOINT` | Internal MinIO host (e.g., `minio:9000`) |
+| `MINIO_ROOT_USER` | MinIO access key |
+| `MINIO_ROOT_PASSWORD` | MinIO secret key |
+| `MINIO_PUBLIC_URL` | Public-facing MinIO URL (e.g., `http://localhost:9000`) |
+| `MINIO_BUCKET` | Bucket name (default: `regevent`) |
+| `SMTP_HOST` | SMTP server host |
+| `SMTP_PORT` | SMTP server port |
+| `APP_BASE_URL` | Base URL used in check-in email links |
+
+---
+
+## Frontend
+
+### Running locally (without Docker)
 
 ```bash
 cd frontend
 npm install
 npm run dev
-npm run test
-npm run lint
 ```
 
-## Conventions
+### Other scripts
 
-### Backend
+```bash
+npm run build   # Production build (outputs to dist/)
+npm run preview # Preview the production build locally
+npm run lint    # ESLint
+npm run test    # Vitest
+```
 
-- Use **SQLModel** for models (combines Pydantic + SQLAlchemy).
-- One router file per resource under `backend/app/routers/` (`events.py`, `attendees.py`, `raffle.py`).
-- Use `async def` for I/O-bound endpoints; use `asyncpg` as the async PostgreSQL driver.
-- Inject database sessions via `Depends(get_session)`.
-- Use [BACKEND_ARCHITECTURE](BACKEND_ARCHITECTURE.md) as primary source of truth for backend related items.
+### Key dependencies
 
-### Frontend
+- **React Router v7** — client-side routing
+- **Zustand** — lightweight global state (auth, events, editor, stats, activity)
+- **TanStack Query** — server state and caching
+- **react-qr-code** — QR code rendering for check-in links
+- **Tailwind CSS v3** — utility-first styling (mobile-first)
 
-- **Mobile-first**: design for small screens first.
-- Component files use **PascalCase** (`AttendeeCard.tsx`); hooks use `use` prefix (`useRaffle.ts`).
-- Tailwind utility classes only — no custom CSS files unless strictly necessary.
-- Centralize API calls under `frontend/src/api/` using `fetch` or a thin Axios wrapper.
-- TypeScript strict mode (`"strict": true` in `tsconfig.json`).
-- Use [FRONTEND_ARCHITECTURE](FRONTEND_ARCHITECTURE.md) as primary source of truth for frontend related items.
+See [FRONTEND_ARCHITECTURE.md](FRONTEND_ARCHITECTURE.md) for component and routing details.
 
-## Pitfalls
+---
 
-- **Docker static files**: Vite's `dist/` output must be copied into the FastAPI image at the exact path FastAPI expects when mounting `StaticFiles`.
-- **WebSocket scaling**: WebSocket connections require sticky sessions at the load balancer if ever scaling beyond a single container.
-- **Tailwind JIT**: The `content` array in `tailwind.config.ts` must include all `.tsx`/`.ts` files or utility classes will be purged from the build.
+## Docker Configuration
+
+Six services are defined in `docker-compose.yml`:
+
+| Service | Image / Dockerfile | Ports | Networks |
+|---|---|---|---|
+| `frontend` | `docker/Dockerfile.frontend` (Node 20 Alpine) | 5173 | `web_network` |
+| `backend` | `docker/Dockerfile.backend` (Python 3.12 slim) | 8000 | `web_network`, `db_network` |
+| `db` | `docker/Dockerfile.db` (PostgreSQL) | — (internal) | `db_network` |
+| `minio` | `minio/minio:latest` | 9000, 9001 | `db_network` |
+| `mailpit` | `axllent/mailpit:latest` | 1025 (SMTP), 8025 (UI) | `db_network` |
+
+- **Backend** waits for `db` (healthcheck), `minio` (healthcheck), and `mailpit` to be ready before starting.
+- **Frontend** source is bind-mounted (`./frontend:/app`) so code changes trigger HMR without rebuilding the image.
+- **Backend** source is also bind-mounted (`./backend:/app`) with `--reload` enabled.
+- PostgreSQL data persists in the `postgres_data` named volume; MinIO data in `minio_data`.
+- Two isolated networks keep the database and storage services off the public-facing `web_network`.
