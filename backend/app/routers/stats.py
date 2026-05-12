@@ -33,14 +33,17 @@ async def dashboard_stats(
     total_attendees = await session.scalar(
         select(func.count(Attendee.id))
         .join(Event, Attendee.event_id == Event.id)
-        .where(Event.owner_id == current_user.id)
+        .where(or_(Event.owner_id == current_user.id, role == "admin"))
     ) or 0
 
     total_prizes_awarded = await session.scalar(
         select(func.count(Attendee.id))
         .join(Event, Attendee.event_id == Event.id)
         .where(
-            Event.owner_id == current_user.id,
+            or_(
+                Event.owner_id == current_user.id,
+                role == "admin"
+            ),
             Attendee.has_won == True,  # noqa: E712
         )
     ) or 0
