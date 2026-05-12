@@ -105,6 +105,111 @@ This section handles the basic representation of the organizer.
 
 ---
 
+# Event Creation & Layout Builder Specification
+
+This module allows organizers to build a fully customized event landing page.
+
+The resulting configuration is saved as an `EventLayout` record in the database, which the Schema-to-UI engine uses to render the attendee portal.
+
+---
+
+# 2. Visual Layout Builder (The Canvas)
+
+This is a **What You See Is What You Get (WYSIWYG)** interface managed via Zustand for real-time responsiveness.
+
+## Component Sidebar (The Tray)
+
+A list of draggable components that the organizer can add to the `structure` JSONB array, including:
+
+- Hero
+- Registration Form
+- Map
+- Countdown
+
+## Reordering Logic
+
+Organizers can drag and drop components to change their sequence.
+
+This updates the index of the strings in the `EventLayout.structure` field.
+
+## Asset Management
+
+A dedicated zone to upload a Hero Image.
+
+This image URL is:
+
+- Saved into the layout configuration
+- Rendered in the Dynamic Hero zone of the attendee portal
+
+---
+
+# 3. Theming & Customization Inspector
+
+When a component is selected on the canvas, this sidebar opens to allow granular styling.
+
+## Brand Color Picker
+
+Inputs to define:
+
+- Primary Color: `#81A6C6`
+- Accent Color: `#AACDDC`
+
+These values are saved to the `styles` JSONB object.
+
+## Text Editor
+
+Allows the organizer to customize:
+
+- Labels
+- Headings
+- Descriptions
+
+for each component.
+
+# 4. Preview & Publish Logic
+
+## Device Toggle
+
+Allows the organizer to switch between:
+
+- Mobile View
+- Desktop View
+
+This ensures the layout adheres to the mobile-first philosophy.
+
+## Persistence
+
+Clicking **Publish** triggers a TanStack Query mutation that sends the final `Event` and `EventLayout` objects to the FastAPI backend.
+
+## Alembic Check
+
+The backend ensures all relational connections between the new event and its layout are correctly established in PostgreSQL.
+
+---
+
+# UI/UX Implementation Note
+
+## Colors
+
+The editor UI uses:
+
+- `#F3E3D0` for sidebars
+- `#D2C4B4` for borders
+
+This visually differentiates the **management interface** from the **live preview** of the event.
+
+## State Split
+
+While the organizer is editing:
+
+- State is kept local to Zustand
+- Unnecessary API calls are prevented
+
+Data is only persisted to the backend when the user clicks:
+
+- **Save**
+- **Publish**
+
 ## Technical Implementation Notes
 
 ### Colors
