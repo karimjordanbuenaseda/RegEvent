@@ -6,6 +6,7 @@ from sqlmodel import select, or_
 from app.database import get_session
 from app.models.attendee import Attendee
 from app.models.event import Event, EventWithStats
+from app.models.event_layout import EventLayout
 from app.models.user import User
 from app.routers.auth import get_current_user
 
@@ -24,8 +25,10 @@ async def list_my_events(
             func.count(Attendee.id)
             .filter(Attendee.check_in_status == True)  # noqa: E712
             .label("checked_in_count"),
+            func.max(EventLayout.cover_image_url).label("cover_image_url"),
         )
         .outerjoin(Attendee, Attendee.event_id == Event.id)
+        .outerjoin(EventLayout, EventLayout.event_id == Event.id)
         .where(or_(Event.owner_id == current_user.id, current_user.role == "admin"))
         .group_by(Event.id)
         .order_by(Event.start_date.desc())
@@ -36,6 +39,7 @@ async def list_my_events(
             **row.Event.model_dump(),
             total_attendees=row.total_attendees or 0,
             checked_in_count=row.checked_in_count or 0,
+            cover_image_url=row.cover_image_url,
         )
         for row in rows
     ]

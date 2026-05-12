@@ -15,3 +15,4 @@ class EventLayout(SQLModel, table=True):
     structure: Optional[list] = Field(default=None, sa_column=Column(JSONB))
     # CSS variable overrides e.g. {"primary": "#81A6C6"}
     styles: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
+    cover_image_url: Optional[str] = None

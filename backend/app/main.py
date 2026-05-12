@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import init_db
-from app.routers import events, attendees, raffle, event_layouts, users, auth, stats, activity
+from app.routers import events, attendees, raffle, event_layouts, users, auth, stats, activity, uploads
 
 
 @asynccontextmanager
@@ -30,6 +30,7 @@ app.include_router(events.router)
 app.include_router(event_layouts.router)
 app.include_router(attendees.router)
 app.include_router(raffle.router)
+app.include_router(uploads.router)
 
 
 @app.get("/health")
