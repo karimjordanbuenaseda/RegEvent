@@ -1,10 +1,9 @@
-import asyncio
 import os
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import SQLModel, select
 
@@ -30,7 +29,11 @@ async def list_attendees(event_id: UUID, session: AsyncSession = Depends(get_ses
 
 
 @router.post("/", response_model=Attendee, status_code=201)
-async def register_attendee(payload: AttendeeCreate, session: AsyncSession = Depends(get_session)):
+async def register_attendee(
+    payload: AttendeeCreate,
+    background_tasks: BackgroundTasks,
+    session: AsyncSession = Depends(get_session),
+):
     attendee = Attendee(
         event_id=payload.event_id,
         email=payload.email,
@@ -48,13 +51,12 @@ async def register_attendee(payload: AttendeeCreate, session: AsyncSession = Dep
     if event:
         base_url = os.environ.get("APP_BASE_URL", "http://localhost:5173")
         checkin_url = f"{base_url}/events/{event.slug}/checkin/{attendee.id}"
-        asyncio.create_task(
-            send_checkin_email(
-                to=attendee.email,
-                name=attendee.full_name or "",
-                event_title=event.title,
-                checkin_url=checkin_url,
-            )
+        background_tasks.add_task(
+            send_checkin_email,
+            to=attendee.email,
+            name=attendee.full_name or "",
+            event_title=event.title,
+            checkin_url=checkin_url,
         )
 
     return attendee

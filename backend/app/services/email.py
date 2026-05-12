@@ -1,8 +1,11 @@
+import logging
 import os
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import aiosmtplib
+
+logger = logging.getLogger(__name__)
 
 
 def _build_checkin_html(name: str, event_title: str, checkin_url: str) -> str:
@@ -81,15 +84,20 @@ async def send_checkin_email(to: str, name: str, event_title: str, checkin_url: 
 
     msg.attach(MIMEText(_build_checkin_html(name, event_title, checkin_url), "html"))
 
+    send_kwargs: dict = dict(
+        hostname=smtp_host,
+        port=smtp_port,
+        username=smtp_user,
+        password=smtp_password,
+    )
+    # use_tls and start_tls are mutually exclusive — only pass the active one
+    if use_tls:
+        send_kwargs["use_tls"] = True
+    elif start_tls:
+        send_kwargs["start_tls"] = True
+
     try:
-        await aiosmtplib.send(
-            msg,
-            hostname=smtp_host,
-            port=smtp_port,
-            username=smtp_user,
-            password=smtp_password,
-            use_tls=use_tls,
-            start_tls=start_tls,
-        )
-    except Exception as exc:
-        print(f"[email] Failed to send check-in email to {to}: {exc}")
+        await aiosmtplib.send(msg, **send_kwargs)
+        logger.info("[email] Check-in email sent to %s", to)
+    except Exception:
+        logger.exception("[email] Failed to send check-in email to %s", to)
