@@ -3,6 +3,7 @@ import { login as apiLogin, register as apiRegister, getMe } from '../api/auth'
 import type { UserPublic } from '../api/auth'
 import { useEventsStore } from './eventsStore'
 import { useStatsStore } from './statsStore'
+import { useActivityStore } from './activityStore'
 
 const TOKEN_KEY = 'access_token'
 
@@ -57,6 +58,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     set({ token: null, user: null, error: null })
     useEventsStore.getState().clear()
     useStatsStore.getState().clear()
+    useActivityStore.getState().clear()
   },
 
   hydrate: async () => {
