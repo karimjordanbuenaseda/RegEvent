@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Literal
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import SQLModel, select, or_
 from app.database import get_session
@@ -11,8 +11,6 @@ from app.routers.auth import get_current_user
 
 router = APIRouter(prefix="/activity", tags=["activity"])
 
-LIMIT = 15
-
 
 class ActivityItem(SQLModel):
     type: Literal["registration", "check_in"]
@@ -21,19 +19,29 @@ class ActivityItem(SQLModel):
     timestamp: datetime
 
 
-@router.get("/recent", response_model=list[ActivityItem])
+class ActivityPage(SQLModel):
+    items: list[ActivityItem]
+    has_next: bool
+
+
+@router.get("/recent", response_model=ActivityPage)
 async def recent_activity(
+    page: int = Query(1, ge=1),
+    limit: int = Query(15, ge=1, le=50),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
     scope = or_(Event.owner_id == current_user.id, current_user.role == "admin")
+    # Fetch enough rows from each source to cover the requested page plus one
+    # extra (to detect whether a next page exists).
+    needed = page * limit + 1
 
     reg_rows = (await session.execute(
         select(Attendee.full_name, Attendee.email, Attendee.created_at, Event.title)
         .join(Event, Event.id == Attendee.event_id)
         .where(scope)
         .order_by(Attendee.created_at.desc())
-        .limit(LIMIT)
+        .limit(needed)
     )).all()
 
     checkin_rows = (await session.execute(
@@ -41,13 +49,13 @@ async def recent_activity(
         .join(Event, Event.id == Attendee.event_id)
         .where(Attendee.check_in_status == True, Attendee.checked_in_at.is_not(None), scope)  # noqa: E712
         .order_by(Attendee.checked_in_at.desc())
-        .limit(LIMIT)
+        .limit(needed)
     )).all()
 
-    items: list[ActivityItem] = []
+    all_items: list[ActivityItem] = []
 
     for row in reg_rows:
-        items.append(ActivityItem(
+        all_items.append(ActivityItem(
             type="registration",
             attendee_name=row.full_name or row.email,
             event_title=row.title,
@@ -55,12 +63,18 @@ async def recent_activity(
         ))
 
     for row in checkin_rows:
-        items.append(ActivityItem(
+        all_items.append(ActivityItem(
             type="check_in",
             attendee_name=row.full_name or row.email,
             event_title=row.title,
             timestamp=row.checked_in_at,
         ))
 
-    items.sort(key=lambda x: x.timestamp, reverse=True)
-    return items[:20]
+    all_items.sort(key=lambda x: x.timestamp, reverse=True)
+
+    start = (page - 1) * limit
+    end = start + limit
+    return ActivityPage(
+        items=all_items[start:end],
+        has_next=len(all_items) > end,
+    )
