@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { EventWithStats } from '../api/events'
 
@@ -38,6 +39,7 @@ function CheckInBar({ checked, total }: { checked: number; total: number; }) {
 
 export default function EventCard({ event }: { event: EventWithStats }) {
   const navigate = useNavigate()
+  const [copied, setCopied] = useState(false)
   const primary = event.primary_color ?? DEFAULT_PRIMARY
   const accent = event.accent_color ?? DEFAULT_ACCENT
 
@@ -46,6 +48,14 @@ export default function EventCard({ event }: { event: EventWithStats }) {
     day: 'numeric',
     year: 'numeric',
   })
+
+  function copyRegistrationLink() {
+    const url = `${window.location.origin}/events/${event.slug}/register`
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
@@ -91,6 +101,24 @@ export default function EventCard({ event }: { event: EventWithStats }) {
             Raffle Control
           </button>
         </div>
+
+        <button
+          onClick={copyRegistrationLink}
+          className="flex items-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed text-xs text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-colors"
+        >
+          {copied ? (
+            <svg className="w-3.5 h-3.5 text-green-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+          )}
+          <span className={`truncate ${copied ? 'text-green-500' : ''}`}>
+            {copied ? 'Link copied!' : `/events/${event.slug}/register`}
+          </span>
+        </button>
       </div>
 
     </div>
