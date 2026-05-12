@@ -1,5 +1,6 @@
 import TopNav from '../components/TopNav'
 import MetricRibbon from '../components/MetricRibbon'
+import EventsGrid from '../components/EventsGrid'
 
 export default function DashboardPage() {
   return (
@@ -7,6 +8,7 @@ export default function DashboardPage() {
       <TopNav />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
         <MetricRibbon />
+        <EventsGrid />
       </main>
     </div>
   )
