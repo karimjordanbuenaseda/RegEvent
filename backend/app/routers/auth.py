@@ -1,13 +1,14 @@
 import os
 from datetime import datetime, timedelta, timezone
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from passlib.context import CryptContext
-from jose import jwt
+from jose import jwt, JWTError
 from app.database import get_session
-from app.models.user import User
+from app.models.user import User, UserPublic
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -16,6 +17,26 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-in-production")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 8
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    session: AsyncSession = Depends(get_session),
+) -> User:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str | None = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = await session.get(User, UUID(user_id))
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+    return user
 
 
 @router.post("/login")
@@ -38,3 +59,8 @@ async def login(
         algorithm=ALGORITHM,
     )
     return {"access_token": token, "token_type": "bearer"}
+
+
+@router.get("/me", response_model=UserPublic)
+async def get_me(current_user: User = Depends(get_current_user)):
+    return current_user
