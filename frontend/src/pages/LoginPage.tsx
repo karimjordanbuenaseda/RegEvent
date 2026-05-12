@@ -1,32 +1,29 @@
 import { useState, FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { login } from '../api/auth'
-import { useAuth } from '../context/AuthContext'
+import { useAuthStore } from '../store/authStore'
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const { token, setToken } = useAuth()
+  const token = useAuthStore((s) => s.token)
+  const storeLogin = useAuthStore((s) => s.login)
+  const storeError = useAuthStore((s) => s.error)
+  const isLoading = useAuthStore((s) => s.isLoading)
+  const clearError = useAuthStore((s) => s.clearError)
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   if (token) return <Navigate to="/" replace />
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setError(null)
-    setLoading(true)
+    clearError()
     try {
-      const { access_token } = await login(email, password)
-      setToken(access_token)
+      await storeLogin(email, password)
       navigate('/')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
-    } finally {
-      setLoading(false)
+    } catch {
+      // error is set in the store
     }
   }
 
@@ -42,9 +39,9 @@ export default function LoginPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
           <h2 className="text-lg font-semibold text-gray-800 mb-6">Sign in to your account</h2>
 
-          {error && (
+          {storeError && (
             <div className="mb-5 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-              {error}
+              {storeError}
             </div>
           )}
 
@@ -92,10 +89,10 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={isLoading}
               className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-semibold py-2.5 transition-colors"
             >
-              {loading ? 'Signing in…' : 'Sign in'}
+              {isLoading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
         </div>

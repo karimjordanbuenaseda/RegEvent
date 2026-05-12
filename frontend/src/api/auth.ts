@@ -37,3 +37,7 @@ export async function register(data: {
 }): Promise<UserPublic> {
   return apiFetch<UserPublic>('/users/', { method: 'POST', body: JSON.stringify(data) })
 }
+
+export async function getMe(): Promise<UserPublic> {
+  return apiFetch<UserPublic>('/auth/me')
+}

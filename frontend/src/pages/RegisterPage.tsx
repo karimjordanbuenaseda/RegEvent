@@ -1,7 +1,6 @@
 import { useState, FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { register } from '../api/auth'
-import { useAuth } from '../context/AuthContext'
+import { useAuthStore } from '../store/authStore'
 
 type Role = 'admin' | 'creator'
 
@@ -14,7 +13,11 @@ interface FormState {
 
 export default function RegisterPage() {
   const navigate = useNavigate()
-  const { token } = useAuth()
+  const token = useAuthStore((s) => s.token)
+  const storeRegister = useAuthStore((s) => s.register)
+  const storeError = useAuthStore((s) => s.error)
+  const isLoading = useAuthStore((s) => s.isLoading)
+  const clearError = useAuthStore((s) => s.clearError)
 
   const [form, setForm] = useState<FormState>({
     full_name: '',
@@ -23,8 +26,6 @@ export default function RegisterPage() {
     role: 'creator',
   })
   const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   if (token) return <Navigate to="/" replace />
 
@@ -34,15 +35,12 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setError(null)
-    setLoading(true)
+    clearError()
     try {
-      await register(form)
+      await storeRegister(form)
       navigate('/login')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed')
-    } finally {
-      setLoading(false)
+    } catch {
+      // error is set in the store
     }
   }
 
@@ -58,9 +56,9 @@ export default function RegisterPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
           <h2 className="text-lg font-semibold text-gray-800 mb-6">Create an account</h2>
 
-          {error && (
+          {storeError && (
             <div className="mb-5 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-              {error}
+              {storeError}
             </div>
           )}
 
@@ -139,10 +137,10 @@ export default function RegisterPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={isLoading}
               className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-semibold py-2.5 transition-colors"
             >
-              {loading ? 'Creating account…' : 'Create account'}
+              {isLoading ? 'Creating account…' : 'Create account'}
             </button>
           </form>
         </div>
