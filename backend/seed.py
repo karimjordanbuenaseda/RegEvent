@@ -101,13 +101,21 @@ async def _seed_attendees(session, rows: list) -> int:
     count = 0
     for row in rows:
         if not await session.get(Attendee, UUID(row["id"])):
+            checked_in_at = (
+                datetime.fromisoformat(row["checked_in_at"])
+                if row.get("checked_in_at")
+                else None
+            )
             session.add(Attendee(
                 id=UUID(row["id"]),
                 event_id=UUID(row["event_id"]),
+                full_name=row.get("full_name"),
                 email=row["email"],
                 ticket_tier=TicketTier(row["ticket_tier"]),
                 check_in_status=row.get("check_in_status", False),
                 has_won=row.get("has_won", False),
+                created_at=datetime.fromisoformat(row["created_at"]) if row.get("created_at") else datetime.utcnow(),
+                checked_in_at=checked_in_at,
             ))
             count += 1
     await session.commit()

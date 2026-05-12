@@ -2,121 +2,166 @@
   {
     "id": "30000000-0000-0000-0000-000000000001",
     "event_id": "10000000-0000-0000-0000-000000000001",
+    "full_name": "Miguel Torres",
     "email": "miguel.torres@email.com",
     "ticket_tier": "VIP",
     "check_in_status": true,
-    "has_won": false
+    "has_won": false,
+    "created_at": "2026-05-12T07:15:00",
+    "checked_in_at": "2026-05-12T08:02:00"
   },
   {
     "id": "30000000-0000-0000-0000-000000000002",
     "event_id": "10000000-0000-0000-0000-000000000001",
+    "full_name": "Sofia Lim",
     "email": "sofia.lim@email.com",
     "ticket_tier": "General",
     "check_in_status": true,
-    "has_won": false
+    "has_won": false,
+    "created_at": "2026-05-12T07:22:00",
+    "checked_in_at": "2026-05-12T08:10:00"
   },
   {
     "id": "30000000-0000-0000-0000-000000000003",
     "event_id": "10000000-0000-0000-0000-000000000001",
+    "full_name": "Rafael Cruz",
     "email": "rafael.cruz@email.com",
     "ticket_tier": "General",
     "check_in_status": false,
-    "has_won": false
+    "has_won": false,
+    "created_at": "2026-05-12T07:40:00",
+    "checked_in_at": null
   },
   {
     "id": "30000000-0000-0000-0000-000000000004",
     "event_id": "10000000-0000-0000-0000-000000000002",
+    "full_name": "Isabella Santos",
     "email": "isabella.santos@email.com",
     "ticket_tier": "VIP",
     "check_in_status": true,
-    "has_won": true
+    "has_won": true,
+    "created_at": "2026-05-11T14:05:00",
+    "checked_in_at": "2026-05-11T15:00:00"
   },
   {
     "id": "30000000-0000-0000-0000-000000000005",
     "event_id": "10000000-0000-0000-0000-000000000002",
+    "full_name": "Lucas Ramos",
     "email": "lucas.ramos@email.com",
     "ticket_tier": "General",
     "check_in_status": true,
-    "has_won": false
+    "has_won": false,
+    "created_at": "2026-05-11T14:18:00",
+    "checked_in_at": "2026-05-11T15:12:00"
   },
   {
     "id": "30000000-0000-0000-0000-000000000006",
     "event_id": "10000000-0000-0000-0000-000000000002",
+    "full_name": "Camille Flores",
     "email": "camille.flores@email.com",
     "ticket_tier": "VIP",
     "check_in_status": false,
-    "has_won": false
+    "has_won": false,
+    "created_at": "2026-05-11T14:35:00",
+    "checked_in_at": null
   },
   {
     "id": "30000000-0000-0000-0000-000000000007",
     "event_id": "10000000-0000-0000-0000-000000000003",
+    "full_name": "Andrei Navarro",
     "email": "andrei.navarro@email.com",
     "ticket_tier": "General",
     "check_in_status": true,
-    "has_won": false
+    "has_won": false,
+    "created_at": "2026-05-10T09:00:00",
+    "checked_in_at": "2026-05-10T10:05:00"
   },
   {
     "id": "30000000-0000-0000-0000-000000000008",
     "event_id": "10000000-0000-0000-0000-000000000003",
+    "full_name": "Patricia Dizon",
     "email": "patricia.dizon@email.com",
     "ticket_tier": "General",
     "check_in_status": true,
-    "has_won": false
+    "has_won": false,
+    "created_at": "2026-05-10T09:15:00",
+    "checked_in_at": "2026-05-10T10:20:00"
   },
   {
     "id": "30000000-0000-0000-0000-000000000009",
     "event_id": "10000000-0000-0000-0000-000000000003",
+    "full_name": "Jerome Villanueva",
     "email": "jerome.villanueva@email.com",
     "ticket_tier": "VIP",
     "check_in_status": false,
-    "has_won": false
+    "has_won": false,
+    "created_at": "2026-05-10T09:30:00",
+    "checked_in_at": null
   },
   {
     "id": "30000000-0000-0000-0000-000000000010",
     "event_id": "10000000-0000-0000-0000-000000000004",
+    "full_name": "Kristine Aquino",
     "email": "kristine.aquino@email.com",
     "ticket_tier": "VIP",
     "check_in_status": true,
-    "has_won": false
+    "has_won": false,
+    "created_at": "2026-05-09T13:00:00",
+    "checked_in_at": "2026-05-09T14:00:00"
   },
   {
     "id": "30000000-0000-0000-0000-000000000011",
     "event_id": "10000000-0000-0000-0000-000000000004",
+    "full_name": "David Mendoza",
     "email": "david.mendoza@email.com",
     "ticket_tier": "General",
     "check_in_status": true,
-    "has_won": false
+    "has_won": false,
+    "created_at": "2026-05-09T13:10:00",
+    "checked_in_at": "2026-05-09T14:15:00"
   },
   {
     "id": "30000000-0000-0000-0000-000000000012",
     "event_id": "10000000-0000-0000-0000-000000000004",
+    "full_name": "Patricia Dela Rosa",
     "email": "patricia.dela-rosa@email.com",
     "ticket_tier": "General",
     "check_in_status": false,
-    "has_won": false
+    "has_won": false,
+    "created_at": "2026-05-09T13:25:00",
+    "checked_in_at": null
   },
   {
     "id": "30000000-0000-0000-0000-000000000013",
     "event_id": "10000000-0000-0000-0000-000000000005",
+    "full_name": "Carlo Bautista",
     "email": "carlo.bautista@email.com",
     "ticket_tier": "VIP",
     "check_in_status": true,
-    "has_won": false
+    "has_won": false,
+    "created_at": "2026-05-08T10:00:00",
+    "checked_in_at": "2026-05-08T11:00:00"
   },
   {
     "id": "30000000-0000-0000-0000-000000000014",
     "event_id": "10000000-0000-0000-0000-000000000005",
+    "full_name": "Maricel Abad",
     "email": "maricel.abad@email.com",
     "ticket_tier": "General",
     "check_in_status": true,
-    "has_won": false
+    "has_won": false,
+    "created_at": "2026-05-08T10:12:00",
+    "checked_in_at": "2026-05-08T11:08:00"
   },
   {
     "id": "30000000-0000-0000-0000-000000000015",
     "event_id": "10000000-0000-0000-0000-000000000005",
+    "full_name": "Ryan Pascual",
     "email": "ryan.pascual@email.com",
     "ticket_tier": "General",
     "check_in_status": false,
-    "has_won": false
+    "has_won": false,
+    "created_at": "2026-05-08T10:28:00",
+    "checked_in_at": null
   }
 ]
