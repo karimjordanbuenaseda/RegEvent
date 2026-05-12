@@ -1,12 +1,26 @@
+import asyncio
+import os
+from typing import Optional
 from uuid import UUID
 from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import SQLModel, select
+
 from app.database import get_session
-from app.models.attendee import Attendee
+from app.models.attendee import Attendee, TicketTier
+from app.models.event import Event
+from app.services.email import send_checkin_email
 
 router = APIRouter(prefix="/attendees", tags=["attendees"])
+
+
+class AttendeeCreate(SQLModel):
+    event_id: UUID
+    email: str
+    full_name: Optional[str] = None
+    ticket_tier: TicketTier = TicketTier.GENERAL
 
 
 @router.get("/", response_model=list[Attendee])
@@ -16,10 +30,33 @@ async def list_attendees(event_id: UUID, session: AsyncSession = Depends(get_ses
 
 
 @router.post("/", response_model=Attendee, status_code=201)
-async def register_attendee(attendee: Attendee, session: AsyncSession = Depends(get_session)):
+async def register_attendee(payload: AttendeeCreate, session: AsyncSession = Depends(get_session)):
+    attendee = Attendee(
+        event_id=payload.event_id,
+        email=payload.email,
+        full_name=payload.full_name,
+        ticket_tier=payload.ticket_tier,
+    )
     session.add(attendee)
     await session.commit()
     await session.refresh(attendee)
+
+    event = (
+        await session.execute(select(Event).where(Event.id == attendee.event_id))
+    ).scalars().first()
+
+    if event:
+        base_url = os.environ.get("APP_BASE_URL", "http://localhost:5173")
+        checkin_url = f"{base_url}/events/{event.slug}/checkin/{attendee.id}"
+        asyncio.create_task(
+            send_checkin_email(
+                to=attendee.email,
+                name=attendee.full_name or "",
+                event_title=event.title,
+                checkin_url=checkin_url,
+            )
+        )
+
     return attendee
 
 
