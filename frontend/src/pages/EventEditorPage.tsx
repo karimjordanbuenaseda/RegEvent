@@ -4,6 +4,8 @@ import TopNav from '../components/TopNav'
 import { useEditorStore } from '../store/editorStore'
 import { uploadEventCover } from '../api/uploads'
 import type { ComponentType } from '../api/eventLayouts'
+import { listAttendees, inviteAttendee } from '../api/attendees'
+import type { Attendee, TicketTier } from '../api/attendees'
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -276,6 +278,22 @@ function LeftPanel() {
             />
           </Field>
         </div>
+
+        <a
+          href={
+            latitude && longitude
+              ? `https://maps.google.com/maps?q=${latitude},${longitude}`
+              : 'https://maps.google.com'
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#D2C4B4] bg-white hover:bg-white/80 text-xs text-[#81A6C6] transition-colors w-full"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+          </svg>
+          Open in Google Maps
+        </a>
       </div>
 
       <div className="h-px bg-[#D2C4B4] mx-4" />
@@ -389,6 +407,136 @@ function CanvasPanel() {
   )
 }
 
+// ─── attendees panel ──────────────────────────────────────────────────────────
+
+function AttendeesPanel({ eventId }: { eventId: string }) {
+  const [attendees, setAttendees] = useState<Attendee[]>([])
+  const [loading, setLoading] = useState(true)
+  const [email, setEmail] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [tier, setTier] = useState<TicketTier>('General')
+  const [inviting, setInviting] = useState(false)
+  const [inviteError, setInviteError] = useState<string | null>(null)
+  const [inviteSuccess, setInviteSuccess] = useState(false)
+
+  useEffect(() => { reload() }, [eventId])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function reload() {
+    setLoading(true)
+    try {
+      const list = await listAttendees(eventId)
+      setAttendees(list)
+    } catch {
+      // silently fail — list stays empty
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleInvite(e: React.FormEvent) {
+    e.preventDefault()
+    setInviting(true)
+    setInviteError(null)
+    try {
+      await inviteAttendee({ event_id: eventId, email, full_name: fullName || undefined, ticket_tier: tier })
+      setEmail('')
+      setFullName('')
+      setInviteSuccess(true)
+      setTimeout(() => setInviteSuccess(false), 3000)
+      reload()
+    } catch (err) {
+      setInviteError((err as Error).message)
+    } finally {
+      setInviting(false)
+    }
+  }
+
+  return (
+    <div className="p-5 flex flex-col gap-4 overflow-y-auto">
+      <SectionLabel>Invite Attendee</SectionLabel>
+      <form onSubmit={handleInvite} className="flex flex-col gap-3">
+        <Field label="Email">
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="attendee@example.com"
+            className={INPUT_CLS}
+          />
+        </Field>
+        <Field label="Full Name">
+          <input
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Juan dela Cruz"
+            className={INPUT_CLS}
+          />
+        </Field>
+        <div className="flex gap-2">
+          {(['General', 'VIP'] as TicketTier[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTier(t)}
+              className="flex-1 py-1.5 rounded-lg border text-xs font-medium transition-all"
+              style={
+                tier === t
+                  ? { backgroundColor: '#81A6C6', borderColor: '#81A6C6', color: '#fff' }
+                  : { borderColor: '#D2C4B4', color: '#6b7280', backgroundColor: '#fff' }
+              }
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        {inviteError && <p className="text-xs text-red-500">{inviteError}</p>}
+        {inviteSuccess && <p className="text-xs text-green-600">Invite sent!</p>}
+        <button
+          type="submit"
+          disabled={inviting || !email.trim()}
+          className="py-2 rounded-lg bg-[#81A6C6] text-white text-xs font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+        >
+          {inviting ? 'Sending…' : 'Send Invite'}
+        </button>
+      </form>
+
+      <div className="h-px bg-[#D2C4B4]" />
+
+      <SectionLabel>Attendees ({attendees.length})</SectionLabel>
+      {loading ? (
+        <div className="flex flex-col gap-2 animate-pulse">
+          {[1, 2, 3].map((n) => <div key={n} className="h-10 bg-white/60 rounded-lg" />)}
+        </div>
+      ) : attendees.length === 0 ? (
+        <p className="text-xs text-gray-400 text-center py-4">No attendees yet.</p>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {attendees.map((a) => (
+            <div key={a.id} className="flex items-center gap-2.5 bg-white rounded-lg px-3 py-2 border border-[#D2C4B4]">
+              <div className="w-7 h-7 rounded-full bg-[#81A6C6]/20 flex items-center justify-center text-[10px] font-semibold text-[#81A6C6] shrink-0">
+                {(a.full_name || a.email)[0].toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-gray-800 truncate">{a.full_name || a.email}</p>
+                {a.full_name && <p className="text-[10px] text-gray-400 truncate">{a.email}</p>}
+              </div>
+              <div className="flex flex-col items-end gap-0.5 shrink-0">
+                <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full ${
+                  a.check_in_status ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
+                }`}>
+                  {a.check_in_status ? 'Checked in' : 'Registered'}
+                </span>
+                <span className="text-[9px] text-gray-300">{a.ticket_tier}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── right panel ──────────────────────────────────────────────────────────────
 
 function RightPanel() {
@@ -396,6 +544,7 @@ function RightPanel() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'design' | 'attendees'>('design')
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -414,89 +563,114 @@ function RightPanel() {
   }
 
   return (
-    <aside className="w-full lg:w-72 shrink-0 bg-[#F3E3D0] border-t border-[#D2C4B4] lg:border-t-0 lg:border-l lg:overflow-y-auto">
-      {/* Brand colors */}
-      <div className="p-5 flex flex-col gap-4">
-        <SectionLabel>Brand Colors</SectionLabel>
-
-        {(['primary', 'accent'] as const).map((key) => (
-          <div key={key} className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium text-gray-600 capitalize">{key}</p>
-              <p className="text-[10px] text-gray-400 font-mono">{styles[key]}</p>
-            </div>
-            <label className="w-9 h-9 rounded-lg border border-[#D2C4B4] overflow-hidden cursor-pointer hover:ring-2 hover:ring-[#81A6C6]/30 transition-shadow shrink-0">
-              <input
-                type="color"
-                value={styles[key]}
-                onChange={(e) => setStyle(key, e.target.value)}
-                className="w-12 h-12 -translate-x-1 -translate-y-1 cursor-pointer"
-              />
-            </label>
-          </div>
-        ))}
-
-        {/* Color preview strip */}
-        <div className="h-5 rounded-lg overflow-hidden border border-[#D2C4B4] flex">
-          <div className="flex-1 transition-colors" style={{ backgroundColor: styles.primary }} />
-          <div className="flex-1 transition-colors" style={{ backgroundColor: styles.accent }} />
-        </div>
-      </div>
-
-      <div className="h-px bg-[#D2C4B4] mx-4" />
-
-      {/* Cover image */}
-      <div className="p-5 flex flex-col gap-3">
-        <SectionLabel>Cover Image</SectionLabel>
-
-        {!eventId ? (
-          <p className="text-xs text-gray-400 bg-white/60 rounded-xl p-3 border border-[#D2C4B4] leading-relaxed">
-            Save the event first to upload a cover image.
-          </p>
-        ) : coverImageUrl ? (
-          <div className="flex flex-col gap-2">
-            <img
-              src={coverImageUrl}
-              alt="Cover"
-              className="w-full h-32 object-cover rounded-xl border border-[#D2C4B4]"
-            />
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="text-xs font-medium py-2 rounded-lg border border-[#D2C4B4] bg-white text-gray-600 hover:bg-white/80 transition-colors"
-            >
-              Replace Image
-            </button>
-          </div>
-        ) : (
+    <aside className="w-full lg:w-72 shrink-0 bg-[#F3E3D0] border-t border-[#D2C4B4] lg:border-t-0 lg:border-l flex flex-col lg:overflow-hidden">
+      {/* Tab bar */}
+      <div className="flex border-b border-[#D2C4B4] shrink-0">
+        {(['design', ...(eventId ? ['attendees'] : [])] as const).map((tab) => (
           <button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="flex flex-col items-center justify-center gap-2 py-8 px-4 rounded-xl border-2 border-dashed border-[#D2C4B4] bg-white/40 hover:bg-white/70 disabled:opacity-60 transition-colors text-gray-400 hover:text-gray-600 w-full"
+            key={tab}
+            onClick={() => setActiveTab(tab as 'design' | 'attendees')}
+            className={`flex-1 py-2.5 text-xs font-medium transition-colors capitalize ${
+              activeTab === tab
+                ? 'text-gray-800 border-b-2 border-[#81A6C6] bg-white/40'
+                : 'text-gray-400 hover:text-gray-600'
+            }`}
           >
-            {uploading ? (
-              <p className="text-xs">Uploading…</p>
-            ) : (
-              <>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M16 8l-4-4-4 4M12 4v12" />
-                </svg>
-                <span className="text-xs font-medium">Upload Cover Image</span>
-                <span className="text-[10px]">JPEG, PNG, WebP · Max 5 MB</span>
-              </>
-            )}
+            {tab === 'design' ? 'Design' : 'Attendees'}
           </button>
-        )}
-
-        {uploadError && <p className="text-xs text-red-500">{uploadError}</p>}
-
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
-          onChange={handleFile}
-          className="hidden"
-        />
+        ))}
       </div>
+
+      {activeTab === 'attendees' && eventId ? (
+        <div className="flex-1 lg:overflow-y-auto">
+          <AttendeesPanel eventId={eventId} />
+        </div>
+      ) : (
+        <div className="flex-1 lg:overflow-y-auto">
+          {/* Brand colors */}
+          <div className="p-5 flex flex-col gap-4">
+            <SectionLabel>Brand Colors</SectionLabel>
+
+            {(['primary', 'accent'] as const).map((key) => (
+              <div key={key} className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-gray-600 capitalize">{key}</p>
+                  <p className="text-[10px] text-gray-400 font-mono">{styles[key]}</p>
+                </div>
+                <label className="w-9 h-9 rounded-lg border border-[#D2C4B4] overflow-hidden cursor-pointer hover:ring-2 hover:ring-[#81A6C6]/30 transition-shadow shrink-0">
+                  <input
+                    type="color"
+                    value={styles[key]}
+                    onChange={(e) => setStyle(key, e.target.value)}
+                    className="w-12 h-12 -translate-x-1 -translate-y-1 cursor-pointer"
+                  />
+                </label>
+              </div>
+            ))}
+
+            {/* Color preview strip */}
+            <div className="h-5 rounded-lg overflow-hidden border border-[#D2C4B4] flex">
+              <div className="flex-1 transition-colors" style={{ backgroundColor: styles.primary }} />
+              <div className="flex-1 transition-colors" style={{ backgroundColor: styles.accent }} />
+            </div>
+          </div>
+
+          <div className="h-px bg-[#D2C4B4] mx-4" />
+
+          {/* Cover image */}
+          <div className="p-5 flex flex-col gap-3">
+            <SectionLabel>Cover Image</SectionLabel>
+
+            {!eventId ? (
+              <p className="text-xs text-gray-400 bg-white/60 rounded-xl p-3 border border-[#D2C4B4] leading-relaxed">
+                Save the event first to upload a cover image.
+              </p>
+            ) : coverImageUrl ? (
+              <div className="flex flex-col gap-2">
+                <img
+                  src={coverImageUrl}
+                  alt="Cover"
+                  className="w-full h-32 object-cover rounded-xl border border-[#D2C4B4]"
+                />
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="text-xs font-medium py-2 rounded-lg border border-[#D2C4B4] bg-white text-gray-600 hover:bg-white/80 transition-colors"
+                >
+                  Replace Image
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="flex flex-col items-center justify-center gap-2 py-8 px-4 rounded-xl border-2 border-dashed border-[#D2C4B4] bg-white/40 hover:bg-white/70 disabled:opacity-60 transition-colors text-gray-400 hover:text-gray-600 w-full"
+              >
+                {uploading ? (
+                  <p className="text-xs">Uploading…</p>
+                ) : (
+                  <>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M16 8l-4-4-4 4M12 4v12" />
+                    </svg>
+                    <span className="text-xs font-medium">Upload Cover Image</span>
+                    <span className="text-[10px]">JPEG, PNG, WebP · Max 5 MB</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {uploadError && <p className="text-xs text-red-500">{uploadError}</p>}
+
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={handleFile}
+              className="hidden"
+            />
+          </div>
+        </div>
+      )}
     </aside>
   )
 }

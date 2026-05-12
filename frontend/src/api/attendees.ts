@@ -1,3 +1,5 @@
+import { apiFetch } from './client'
+
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 export type TicketTier = 'General' | 'VIP'
@@ -32,4 +34,15 @@ export async function registerAttendee(payload: AttendeeCreate): Promise<Attende
     throw new Error(error.detail ?? 'Registration failed')
   }
   return res.json()
+}
+
+export function listAttendees(eventId: string): Promise<Attendee[]> {
+  return apiFetch<Attendee[]>(`/attendees/?event_id=${eventId}`)
+}
+
+export function inviteAttendee(payload: AttendeeCreate): Promise<Attendee> {
+  return apiFetch<Attendee>('/attendees/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
 }
