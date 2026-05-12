@@ -36,6 +36,14 @@ export async function registerAttendee(payload: AttendeeCreate): Promise<Attende
   return res.json()
 }
 
+export function getAttendee(attendeeId: string): Promise<Attendee> {
+  return apiFetch<Attendee>(`/attendees/${attendeeId}`)
+}
+
+export function checkInAttendee(attendeeId: string): Promise<Attendee> {
+  return apiFetch<Attendee>(`/attendees/${attendeeId}/check-in`, { method: 'PATCH' })
+}
+
 export function listAttendees(eventId: string): Promise<Attendee[]> {
   return apiFetch<Attendee[]>(`/attendees/?event_id=${eventId}`)
 }

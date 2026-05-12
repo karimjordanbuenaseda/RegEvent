@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
 import EventEditorPage from './pages/EventEditorPage'
 import EventRegistrationPage from './pages/EventRegistrationPage'
+import CheckInPage from './pages/CheckInPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
@@ -58,6 +59,7 @@ function AppRoutes() {
           }
         />
         <Route path="/events/:slug/register" element={<EventRegistrationPage />} />
+        <Route path="/events/:slug/checkin/:attendeeId" element={<CheckInPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
