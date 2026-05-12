@@ -1,6 +1,6 @@
 import enum
 from uuid import UUID, uuid4
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlmodel import SQLModel, Field
 
@@ -18,5 +18,5 @@ class Attendee(SQLModel, table=True):
     ticket_tier: TicketTier = TicketTier.GENERAL
     check_in_status: bool = False
     has_won: bool = False
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     checked_in_at: Optional[datetime] = None

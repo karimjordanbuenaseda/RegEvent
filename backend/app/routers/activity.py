@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,6 +52,9 @@ async def recent_activity(
         .limit(needed)
     )).all()
 
+    def _utc(dt: datetime) -> datetime:
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
     all_items: list[ActivityItem] = []
 
     for row in reg_rows:
@@ -59,7 +62,7 @@ async def recent_activity(
             type="registration",
             attendee_name=row.full_name or row.email,
             event_title=row.title,
-            timestamp=row.created_at,
+            timestamp=_utc(row.created_at),
         ))
 
     for row in checkin_rows:
@@ -67,7 +70,7 @@ async def recent_activity(
             type="check_in",
             attendee_name=row.full_name or row.email,
             event_title=row.title,
-            timestamp=row.checked_in_at,
+            timestamp=_utc(row.checked_in_at),
         ))
 
     all_items.sort(key=lambda x: x.timestamp, reverse=True)
