@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
+import EventEditorPage from './pages/EventEditorPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
@@ -36,6 +37,22 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/events/new"
+          element={
+            <ProtectedRoute>
+              <EventEditorPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/events/:slug/edit"
+          element={
+            <ProtectedRoute>
+              <EventEditorPage />
             </ProtectedRoute>
           }
         />
