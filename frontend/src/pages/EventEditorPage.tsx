@@ -214,6 +214,30 @@ function LeftPanel() {
     addComponent,
   } = useEditorStore()
 
+  const [coordsInput, setCoordsInput] = useState('')
+  const isInitialized = useRef(false)
+
+  useEffect(() => {
+    if (!isInitialized.current && (latitude || longitude)) {
+      isInitialized.current = true
+      setCoordsInput(latitude && longitude ? `${latitude}, ${longitude}` : latitude || longitude)
+    }
+  }, [latitude, longitude])
+
+  function handleCoordsChange(val: string) {
+    setCoordsInput(val)
+    const match = val.trim().match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/)
+    if (match) {
+      setLatitude(match[1])
+      setLongitude(match[2])
+    } else if (!val.trim()) {
+      setLatitude('')
+      setLongitude('')
+    }
+  }
+
+  const coordsValid = !coordsInput.trim() || /^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/.test(coordsInput.trim())
+
   return (
     <aside className="w-full lg:w-72 shrink-0 bg-[#F3E3D0] border-b border-[#D2C4B4] lg:border-b-0 lg:border-r lg:overflow-y-auto">
       {/* Event details */}
@@ -260,24 +284,17 @@ function LeftPanel() {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="Latitude">
-            <input
-              value={latitude}
-              onChange={(e) => setLatitude(e.target.value)}
-              placeholder="14.5995"
-              className={INPUT_CLS + ' text-xs'}
-            />
-          </Field>
-          <Field label="Longitude">
-            <input
-              value={longitude}
-              onChange={(e) => setLongitude(e.target.value)}
-              placeholder="120.9842"
-              className={INPUT_CLS + ' text-xs'}
-            />
-          </Field>
-        </div>
+        <Field label="Coordinates">
+          <input
+            value={coordsInput}
+            onChange={(e) => handleCoordsChange(e.target.value)}
+            placeholder="14.5995, 120.9842"
+            className={INPUT_CLS + ' text-xs' + (!coordsValid ? ' border-red-400 focus:border-red-400 focus:ring-red-200/50' : '')}
+          />
+          {!coordsValid && (
+            <p className="text-[10px] text-red-400 mt-0.5">Enter as: latitude, longitude</p>
+          )}
+        </Field>
 
         <a
           href={

@@ -51,3 +51,11 @@ export function createEvent(payload: EventCreatePayload): Promise<EventBase> {
 export function updateEvent(eventId: string, payload: Partial<EventCreatePayload>): Promise<EventBase> {
   return apiFetch<EventBase>(`/events/${eventId}`, { method: 'PATCH', body: JSON.stringify(payload) })
 }
+
+export function deleteEvent(eventId: string): Promise<void> {
+  return apiFetch<void>(`/events/${eventId}`, { method: 'DELETE' })
+}
+
+export function duplicateEvent(eventId: string): Promise<EventBase> {
+  return apiFetch<EventBase>(`/events/${eventId}/duplicate`, { method: 'POST' })
+}
