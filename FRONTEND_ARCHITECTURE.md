@@ -105,7 +105,7 @@ This section handles the basic representation of the organizer.
 
 ---
 
-# Event Creation & Layout Builder Specification
+# Event Creation & Layout Builder
 
 This module allows organizers to build a fully customized event landing page.
 
