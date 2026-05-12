@@ -4,22 +4,11 @@ import { useAuthStore } from './store/authStore'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
-import TopNav from './components/TopNav'
+import ProfilePage from './pages/ProfilePage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
   return token ? <>{children}</> : <Navigate to="/login" replace />
-}
-
-function ProfilePage() {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <TopNav />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <p className="text-sm text-gray-400">Profile coming soon</p>
-      </main>
-    </div>
-  )
 }
 
 function AppRoutes() {
