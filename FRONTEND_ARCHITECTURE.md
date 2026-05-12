@@ -80,6 +80,31 @@ A vertical sidebar (or bottom drawer on mobile) that provides live updates using
 
 ---
 
+# Profile Sub-Page Specification
+
+The Profile page provides a secure interface for organizers to manage their professional identity and account-wide configurations.
+
+---
+
+## 1. Account Identity Zone
+
+This section handles the basic representation of the organizer.
+
+### Features
+
+- **Professional Details**
+  - Fields for:
+    - Email
+    - Full Name 
+    - Role
+
+  - The bio may appear on dynamic landing pages.
+
+- **Password Management**
+  - A secure form to update credentials utilizing the backend hashing logic.
+
+---
+
 ## Technical Implementation Notes
 
 ### Colors
