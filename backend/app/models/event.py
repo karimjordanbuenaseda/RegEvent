@@ -13,3 +13,16 @@ class Event(SQLModel, table=True):
     longitude: Optional[float] = None
     is_active: bool = True
     start_date: datetime
+
+
+class EventWithStats(SQLModel):
+    id: UUID
+    owner_id: UUID
+    title: str
+    slug: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    is_active: bool
+    start_date: datetime
+    total_attendees: int
+    checked_in_count: int

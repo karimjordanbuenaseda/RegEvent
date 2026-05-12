@@ -1,11 +1,44 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import select, or_
 from app.database import get_session
-from app.models.event import Event
+from app.models.attendee import Attendee
+from app.models.event import Event, EventWithStats
+from app.models.user import User
+from app.routers.auth import get_current_user
 
 router = APIRouter(prefix="/events", tags=["events"])
+
+
+@router.get("/me", response_model=list[EventWithStats])
+async def list_my_events(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    stmt = (
+        select(
+            Event,
+            func.count(Attendee.id).label("total_attendees"),
+            func.count(Attendee.id)
+            .filter(Attendee.check_in_status == True)  # noqa: E712
+            .label("checked_in_count"),
+        )
+        .outerjoin(Attendee, Attendee.event_id == Event.id)
+        .where(or_(Event.owner_id == current_user.id, current_user.role == "admin"))
+        .group_by(Event.id)
+        .order_by(Event.start_date.desc())
+    )
+    rows = (await session.execute(stmt)).all()
+    return [
+        EventWithStats(
+            **row.Event.model_dump(),
+            total_attendees=row.total_attendees or 0,
+            checked_in_count=row.checked_in_count or 0,
+        )
+        for row in rows
+    ]
 
 
 @router.get("/", response_model=list[Event])
