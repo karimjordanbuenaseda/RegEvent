@@ -16,6 +16,7 @@ interface AuthState {
   register: (data: { email: string; full_name: string; password: string; role: 'admin' | 'creator' }) => Promise<void>
   logout: () => void
   hydrate: () => Promise<void>
+  setUser: (user: UserPublic) => void
   clearError: () => void
 }
 
@@ -73,6 +74,8 @@ export const useAuthStore = create<AuthState>()((set) => ({
       set({ token: null, user: null })
     }
   },
+
+  setUser: (user: UserPublic) => set({ user }),
 
   clearError: () => set({ error: null }),
 }))
