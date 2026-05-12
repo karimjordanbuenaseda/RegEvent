@@ -85,10 +85,6 @@ npm run lint
 - TypeScript strict mode (`"strict": true` in `tsconfig.json`).
 - Use [FRONTEND_ARCHITECTURE](FRONTEND_ARCHITECTURE.md) as primary source of truth for frontend related items.
 
-### Commits
-
-Conventional Commits: `feat:`, `fix:`, `chore:`, `docs:`, etc.
-
 ## Pitfalls
 
 - **Docker static files**: Vite's `dist/` output must be copied into the FastAPI image at the exact path FastAPI expects when mounting `StaticFiles`.

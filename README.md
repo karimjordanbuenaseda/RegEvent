@@ -11,7 +11,7 @@ RegEvent is a full-stack web application with these core features:
 - **Event management** — create and manage events, view attendee lists, export data
 - **Event landing page edits** — simple WYSIWYG editor for event pages
 
-The application runs via **Docker Compose** with three services: `frontend` (Vite dev server), `backend` (FastAPI), and `db` (PostgreSQL). Each has its own Dockerfile under `docker/`.
+The application runs via **Docker Compose** with four services: `frontend` (Vite dev server), `backend` (FastAPI), `db` (PostgreSQL), and `minio` (object storage for event images). Each has its own Dockerfile under `docker/`.
 
 ## Architecture
 
@@ -22,6 +22,7 @@ The application runs via **Docker Compose** with three services: `frontend` (Vit
 ```
 
 - Real-time raffle uses **FastAPI WebSockets** (Starlette native) — not Socket.IO.
+- Event images are stored in **MinIO** (S3-compatible). Backend uploads via `minio:9000` (internal Docker); browser fetches images from `http://localhost:9000` (exposed port). The bucket `regevent` is created automatically with public-read policy on first startup.
 - Database concurrency for raffle draw integrity uses **PostgreSQL row-level locking** (`SELECT FOR UPDATE`), not application-level locking.
 - UUIDs are the primary key type for events and attendees.
 - Migrations are managed by **Alembic**.
@@ -83,10 +84,6 @@ npm run lint
 - Centralize API calls under `frontend/src/api/` using `fetch` or a thin Axios wrapper.
 - TypeScript strict mode (`"strict": true` in `tsconfig.json`).
 - Use [FRONTEND_ARCHITECTURE](FRONTEND_ARCHITECTURE.md) as primary source of truth for frontend related items.
-
-### Commits
-
-Conventional Commits: `feat:`, `fix:`, `chore:`, `docs:`, etc.
 
 ## Pitfalls
 
