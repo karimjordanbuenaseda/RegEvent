@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import field_validator
 from sqlalchemy import delete as sa_delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +14,7 @@ from app.models.event import Event, EventWithStats
 from app.models.event_layout import EventLayout
 from app.models.user import User
 from app.routers.auth import get_current_user
+from app.services.email import send_cancellation_email
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -135,6 +136,7 @@ async def update_event(
 @router.delete("/{event_id}", status_code=204)
 async def delete_event(
     event_id: UUID,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
@@ -143,10 +145,21 @@ async def delete_event(
         raise HTTPException(status_code=404, detail="Event not found")
     if event.owner_id != current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized")
+
+    attendees = (
+        await session.execute(
+            select(Attendee.email, Attendee.full_name).where(Attendee.event_id == event_id)
+        )
+    ).all()
+
+    event_title = event.title
     await session.execute(sa_delete(Attendee).where(Attendee.event_id == event_id))
     await session.execute(sa_delete(EventLayout).where(EventLayout.event_id == event_id))
     await session.delete(event)
     await session.commit()
+
+    for row in attendees:
+        background_tasks.add_task(send_cancellation_email, row.email, row.full_name or "", event_title)
 
 
 @router.post("/{event_id}/duplicate", response_model=Event, status_code=201)
