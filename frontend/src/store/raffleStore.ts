@@ -1,15 +1,27 @@
 import { create } from 'zustand'
-import { listPrizes, createPrize, updatePrize, deletePrize } from '../api/raffle'
-import type { Prize, PrizeCreate, PrizeUpdate } from '../api/raffle'
+import { listPrizes, createPrize, updatePrize, deletePrize, drawWinner } from '../api/raffle'
+import type { Prize, PrizeCreate, PrizeUpdate, RaffleWinner } from '../api/raffle'
+
+type Eligibility = 'checked_in' | 'registered' | 'both'
 
 interface RaffleState {
   prizes: Prize[]
   isLoading: boolean
   error: string | null
+
+  eligibility: Eligibility
+  setEligibility: (e: Eligibility) => void
+
+  isDrawing: boolean
+  drawError: string | null
+  lastWinner: RaffleWinner | null
+  clearWinner: () => void
+
   fetchPrizes: (eventId: string) => Promise<void>
   addPrize: (eventId: string, data: PrizeCreate) => Promise<void>
   editPrize: (eventId: string, prizeId: string, data: PrizeUpdate) => Promise<void>
   removePrize: (eventId: string, prizeId: string) => Promise<void>
+  executeDraw: (eventId: string, prizeId?: string) => Promise<void>
   clear: () => void
 }
 
@@ -17,6 +29,14 @@ export const useRaffleStore = create<RaffleState>()((set, get) => ({
   prizes: [],
   isLoading: false,
   error: null,
+
+  eligibility: 'checked_in',
+  setEligibility: (e) => set({ eligibility: e }),
+
+  isDrawing: false,
+  drawError: null,
+  lastWinner: null,
+  clearWinner: () => set({ lastWinner: null, drawError: null }),
 
   fetchPrizes: async (eventId: string) => {
     set({ isLoading: true, error: null })
@@ -47,5 +67,26 @@ export const useRaffleStore = create<RaffleState>()((set, get) => ({
     set({ prizes: get().prizes.filter((p) => p.id !== prizeId) })
   },
 
-  clear: () => set({ prizes: [], isLoading: false, error: null }),
+  executeDraw: async (eventId: string, prizeId?: string) => {
+    set({ isDrawing: true, drawError: null, lastWinner: null })
+    try {
+      const winner = await drawWinner(eventId, {
+        eligibility: get().eligibility,
+        prize_id: prizeId,
+      })
+      set({ lastWinner: winner, isDrawing: false })
+    } catch (err) {
+      set({ drawError: (err as Error).message, isDrawing: false })
+    }
+  },
+
+  clear: () => set({
+    prizes: [],
+    isLoading: false,
+    error: null,
+    eligibility: 'checked_in',
+    isDrawing: false,
+    drawError: null,
+    lastWinner: null,
+  }),
 }))

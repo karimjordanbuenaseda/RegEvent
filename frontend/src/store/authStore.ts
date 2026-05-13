@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { login as apiLogin, register as apiRegister, getMe } from '../api/auth'
 import type { UserPublic } from '../api/auth'
+import { ApiError } from '../api/client'
 import { useEventsStore } from './eventsStore'
 import { useStatsStore } from './statsStore'
 import { useActivityStore } from './activityStore'
@@ -10,6 +11,7 @@ const TOKEN_KEY = 'access_token'
 interface AuthState {
   token: string | null
   user: UserPublic | null
+  hydrated: boolean
   isLoading: boolean
   error: string | null
   login: (email: string, password: string) => Promise<void>
@@ -23,6 +25,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()((set) => ({
   token: localStorage.getItem(TOKEN_KEY),
   user: null,
+  hydrated: false,
   isLoading: false,
   error: null,
 
@@ -64,14 +67,23 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   hydrate: async () => {
     const token = localStorage.getItem(TOKEN_KEY)
-    if (!token) return
+    if (!token) {
+      set({ hydrated: true })
+      return
+    }
     set({ token })
     try {
       const user = await getMe()
-      set({ user })
-    } catch {
-      localStorage.removeItem(TOKEN_KEY)
-      set({ token: null, user: null })
+      set({ user, hydrated: true })
+    } catch (err) {
+      // Only invalidate the session on explicit auth rejection (401/403).
+      // Network errors or backend cold-starts should not log the user out.
+      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+        localStorage.removeItem(TOKEN_KEY)
+        set({ token: null, user: null, hydrated: true })
+      } else {
+        set({ hydrated: true })
+      }
     }
   },
 
