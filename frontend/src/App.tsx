@@ -9,9 +9,18 @@ import EventEditorPage from './pages/EventEditorPage'
 import EventRegistrationPage from './pages/EventRegistrationPage'
 import CheckInPage from './pages/CheckInPage'
 import RaffleControlPage from './pages/RaffleControlPage'
+import RaffleDrawPage from './pages/RaffleDrawPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
+  const hydrated = useAuthStore((s) => s.hydrated)
+  if (!hydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-6 h-6 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
   return token ? <>{children}</> : <Navigate to="/login" replace />
 }
 
@@ -64,6 +73,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <RaffleControlPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/events/:slug/raffle/draw"
+          element={
+            <ProtectedRoute>
+              <RaffleDrawPage />
             </ProtectedRoute>
           }
         />
