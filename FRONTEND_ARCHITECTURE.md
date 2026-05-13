@@ -50,6 +50,10 @@ The primary content area where individual events are managed through a card-base
 - **Check-in Progress Bar**
   - A visual representation of checked-in attendees versus total registered, crucial for monitoring event traffic.
 
+- **Menu**
+  - Delete - event could be deleted and will be treated as canceled. If the event is deleted then an email will be sent to all the attendees.
+  - Duplicate - event details will be copied in a new card except for the attendees.
+
 ### Primary Action Buttons
 
 - **Edit**
@@ -186,6 +190,8 @@ This ensures the layout adheres to the mobile-first philosophy.
   - Email
   - Full Name
 - Once invite button is clicked the target will receive a registration link in the email that will have the same layout as the event created.
+- Creator or Admin will have the ability to remove a attendee
+  - Attendee will receive of the event cancelation
 
 ## Persistence
 
