@@ -279,6 +279,235 @@ A vertical activity feed displays anonymous registration updates such as:
 
 ---
 
+# Regevent: Raffle Control Center Specification
+
+This page is the operator console for triggering high-concurrency raffle draws.
+
+It manages the full lifecycle of a drawing, from prize setup to randomized winner selection and automated email dispatch.
+
+Page should include the event details (e.g. Image used, Date, Event title, and date)
+
+---
+
+# 1. Prize Management Zone
+
+This panel handles the inventory of prizes assigned to a specific `Event` model.
+
+## Create/Delete Prize
+
+Standard forms with strict validation are used to manage the `Prize` table.
+
+## Highlighted Titles
+
+Fields include:
+
+- Title
+
+Examples:
+
+- Grand Prize
+- Consolation Prize
+
+These titles are critical for visual formatting in the final winner announcements.
+
+## Quantities
+
+Tracks remaining prize stock to prevent the system from drawing more winners than available prizes.
+
+---
+
+# 2. Drawing Configuration & Controls
+
+The central command module where operators configure draw rules and manage winner pre-selection.
+
+---
+
+## A. Draw Constraints (Zustand UI State)
+
+Filters the available attendee list before the randomizer executes.
+
+### Eligibility Multi-Select
+
+Operators can toggle constraints to draw only from:
+
+- Registered Attendees
+- Checked-in Attendees
+- Both
+
+Checked-in validation is based on QR code attendance verification.
+
+### Concurrency Note
+
+Eligibility constraints must be validated within the backend transaction layer using:
+
+```sql
+SELECT ... FOR UPDATE
+```
+
+This prevents race conditions during high-concurrency check-in periods.
+
+---
+
+## B. Winner Logic & Pre-Selection
+
+### Pre-Selection Toggle
+
+When enabled:
+
+- The system fetches a pre-configured list of winners
+- The true random number generator is bypassed
+- A backend audit log entry is created automatically
+
+### Fake Randomizer Logic
+
+If pre-selection mode is active:
+
+- The backend uses a deterministic pseudo-random routine
+- The result still appears non-predictable to observers
+- The output adheres to the pre-selected winner sequence
+
+---
+
+# 3. Real-Time Drawing Canvas (Animation Zone)
+
+A dedicated visual zone designed to create excitement during raffle execution.
+
+---
+
+## Text Roulette Animation
+
+### Zustand State Sync
+
+The animation component listens for the start of the FastAPI transaction lifecycle.
+
+### Attendee Cycle
+
+The animation dynamically pulls names from the filtered eligibility list.
+
+Visual behavior includes:
+
+- Rapid text cycling
+- Blur/spin transition effects
+- Hundreds of participant names rotating in sequence
+
+Styling:
+
+- Text Color: `#2D3748`
+- Background Color: `#F8FAF9`
+
+### The Reveal
+
+The animation gradually slows down and stops at the exact moment the backend transaction commits.
+
+The selected winner is revealed using a flash transition with the primary blue color:
+
+- Primary Blue: `#81A6C6`
+
+---
+
+# 4. Draw Actions & Automation (FastAPI Interactions)
+
+---
+
+## A. The Atomic Draw (`SELECT FOR UPDATE`)
+
+### Trigger
+
+The organizer clicks:
+
+> **Execute Atomic Draw**
+
+The operation is intentionally non-asynchronous.
+
+### The Lock
+
+The backend executes an atomic transaction:
+
+```sql
+BEGIN;
+
+SELECT *
+FROM Attendee
+WHERE event_id = X
+AND is_eligible = TRUE
+FOR UPDATE;
+
+COMMIT;
+```
+
+This guarantees:
+
+- One specific prize maps to one specific attendee
+- No duplicate winners occur
+- Database integrity remains consistent under concurrency
+
+---
+
+## B. Post-Draw Workflow (Asynchronous Email Hub)
+
+Once the PostgreSQL transaction commits, an asynchronous task queue is populated with automated jobs.
+
+### Winner Email (Proof)
+
+The task parser:
+
+- Merges winner data into a personalized template
+- Sends a secure confirmation email
+- Provides proof of winning
+
+Example:
+
+> Congratulations, Alice! You won the Grand Prize!
+
+### Revoke Flow
+
+Operators may revoke a winner through the admin interface.
+
+Process:
+
+- Select Winner
+- Click **Revoke Prize**
+
+This triggers an atomic update:
+
+```sql
+has_won = FALSE
+```
+
+After commit:
+
+- The task queue generates a "Prize Revoked" email
+- The attendee receives an automated notification
+
+---
+
+# 5. Winners List & Highlight Zone
+
+A dedicated table/grid provides a real-time summary of draw results.
+
+## Highlighted Titles
+
+Prize titles are prominently displayed using the warmer accent color:
+
+- Accent Highlight: `#F3E3D0`
+
+This visually emphasizes high-value prizes.
+
+## Audit Details
+
+Each winner row displays:
+
+- Winner Name
+- Ticket Tier
+  - General
+  - VIP
+- Prize Title
+- Timestamp of atomic draw commit
+
+This provides complete traceability for raffle operations.
+
+---
+
 # UI/UX Implementation Note
 
 ## Colors
