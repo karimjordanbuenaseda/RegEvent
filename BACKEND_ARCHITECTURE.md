@@ -118,7 +118,7 @@ All routers are mounted in `app/main.py`. Base path prefix is defined per router
 | `events.py` | `/events` | `events` | List, create, update, delete events; `/me` for owned events |
 | `event_layouts.py` | `/event-layouts` | `event-layouts` | CRUD for `EventLayout`; create, list, patch, delete |
 | `attendees.py` | `/attendees` | `attendees` | Register attendees, lookup by ID, check-in patch |
-| `raffle.py` | `/raffle` | `raffle` | `POST /{event_id}/draw` — atomic weighted raffle draw |
+| `raffle.py` | `/raffle` | `raffle` | `POST /{event_id}/draw` — weighted raffle draw |
 | `uploads.py` | `/uploads` | `uploads` | `POST /events/{event_id}/cover` — cover image upload to MinIO |
 | `stats.py` | `/stats` | `stats` | `GET /dashboard` — aggregate counts scoped to current user |
 | `activity.py` | `/activity` | `activity` | `GET /recent` — paginated feed of registrations and check-ins |
@@ -170,10 +170,10 @@ Wraps the **MinIO** Python client for object storage.
 3. The Frontend receives `structure` (e.g., `["hero", "map", "raffle", "footer"]`) and `styles` (e.g., `{"primary": "#81A6C6"}`).
 4. The React app maps the `structure` array to pre-defined TypeScript components and applies `styles` as CSS variables.
 
-### The Raffle Transaction (Atomic)
+### The Raffle Transaction
 1. **Locking:** `SELECT` attendees `FOR UPDATE` — filters for `check_in_status = True` and `has_won = False` within the same DB transaction to prevent concurrent draws picking the same winner.
 2. **Weighted selection:** VIP tickets receive **3×** the weight of General tickets (`random.choices`).
-3. **Commit:** Atomically marks `has_won = True` on the winner.
+3. **Commit:** Marks `has_won = True` on the winner.
 
 ### Event Cover Image Upload
 1. Client calls `POST /uploads/events/{event_id}/cover` with a multipart image (JPEG, PNG, WebP, or GIF; max 5 MB).

@@ -409,19 +409,19 @@ The selected winner is revealed using a flash transition with the primary blue c
 
 ---
 
-## A. The Atomic Draw (`SELECT FOR UPDATE`)
+## A. The Draw (`SELECT FOR UPDATE`)
 
 ### Trigger
 
 The organizer clicks:
 
-> **Execute Atomic Draw**
+> **Execute Draw**
 
 The operation is intentionally non-asynchronous.
 
 ### The Lock
 
-The backend executes an atomic transaction:
+The backend executes a transactional draw:
 
 ```sql
 BEGIN;
@@ -468,7 +468,7 @@ Process:
 - Select Winner
 - Click **Revoke Prize**
 
-This triggers an atomic update:
+This triggers an update:
 
 ```sql
 has_won = FALSE
@@ -502,7 +502,7 @@ Each winner row displays:
   - General
   - VIP
 - Prize Title
-- Timestamp of atomic draw commit
+- Timestamp of draw commit
 
 This provides complete traceability for raffle operations.
 

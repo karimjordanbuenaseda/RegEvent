@@ -125,7 +125,7 @@ pytest tests/test_events.py::test_create_event
 | Auth | `/auth` | `POST /login` (OAuth2 form), `GET /me` |
 | Events | `/events` | CRUD; `GET /me` returns stats joined from layout + attendees |
 | Attendees | `/attendees` | Register, look up by ID, `PATCH /{id}/check-in` |
-| Raffle | `/raffle` | `POST /{event_id}/draw` — atomic, row-locked weighted draw |
+| Raffle | `/raffle` | `POST /{event_id}/draw` — row-locked weighted draw |
 | Event Layouts | `/event-layouts` | CRUD for page builder structure and styles (JSONB) |
 | Uploads | `/uploads` | `POST /events/{id}/cover` — image upload to MinIO (max 5 MB) |
 | Stats | `/stats` | `GET /dashboard` — aggregate counts for the current user |
