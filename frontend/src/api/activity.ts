@@ -1,7 +1,7 @@
 import { apiFetch } from './client'
 
 export interface ActivityItem {
-  type: 'registration' | 'check_in'
+  type: 'registration' | 'check_in' | 'revocation'
   attendee_name: string
   event_title: string
   timestamp: string

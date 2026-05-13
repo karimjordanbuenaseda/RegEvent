@@ -14,19 +14,25 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 86400)}d ago`
 }
 
+const TYPE_CONFIG = {
+  registration: { bg: 'bg-brand-accent/30', text: 'text-brand-primary', icon: '+', label: 'registered for' },
+  check_in:     { bg: 'bg-green-100',        text: 'text-green-600',      icon: '✓', label: 'checked in at' },
+  revocation:   { bg: 'bg-red-100',           text: 'text-red-500',        icon: '×', label: 'invite revoked from' },
+} as const
+
 function ActivityRow({ item }: { item: ActivityItem }) {
-  const isCheckIn = item.type === 'check_in'
+  const cfg = TYPE_CONFIG[item.type]
   return (
     <div className="flex items-start gap-3 py-3 border-b border-gray-50 last:border-0">
-      <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
-        isCheckIn ? 'bg-green-100 text-green-600' : 'bg-brand-accent/30 text-brand-primary'
-      }`}>
-        {isCheckIn ? '✓' : '+'}
+      <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${cfg.bg} ${cfg.text}`}>
+        {cfg.icon}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-800 truncate">{item.attendee_name}</p>
+        <p className={`text-sm font-medium truncate ${item.type === 'revocation' ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+          {item.attendee_name}
+        </p>
         <p className="text-xs text-gray-400 truncate">
-          {isCheckIn ? 'checked in at' : 'registered for'}{' '}
+          {cfg.label}{' '}
           <span className="text-gray-500">{item.event_title}</span>
         </p>
       </div>
