@@ -8,6 +8,7 @@ import ProfilePage from './pages/ProfilePage'
 import EventEditorPage from './pages/EventEditorPage'
 import EventRegistrationPage from './pages/EventRegistrationPage'
 import CheckInPage from './pages/CheckInPage'
+import RaffleControlPage from './pages/RaffleControlPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
@@ -55,6 +56,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <EventEditorPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/events/:slug/raffle"
+          element={
+            <ProtectedRoute>
+              <RaffleControlPage />
             </ProtectedRoute>
           }
         />
