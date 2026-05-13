@@ -2,6 +2,8 @@ import enum
 from uuid import UUID, uuid4
 from datetime import datetime
 from typing import Optional
+from sqlalchemy import Column
+from sqlalchemy import DateTime as SADateTime
 from sqlmodel import SQLModel, Field
 
 
@@ -20,3 +22,8 @@ class Attendee(SQLModel, table=True):
     has_won: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
     checked_in_at: Optional[datetime] = None
+    won_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(SADateTime(timezone=True), nullable=True),
+    )
+    prize_title: Optional[str] = None

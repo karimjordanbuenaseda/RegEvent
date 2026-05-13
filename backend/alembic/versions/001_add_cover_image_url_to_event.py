@@ -5,7 +5,6 @@ Revises:
 Create Date: 2026-05-12
 """
 from alembic import op
-import sqlalchemy as sa
 
 revision = '001'
 down_revision = None
@@ -14,8 +13,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column('eventlayout', sa.Column('cover_image_url', sa.String(), nullable=True))
+    op.execute("ALTER TABLE eventlayout ADD COLUMN IF NOT EXISTS cover_image_url VARCHAR")
 
 
 def downgrade() -> None:
-    op.drop_column('eventlayout', 'cover_image_url')
+    op.execute("ALTER TABLE eventlayout DROP COLUMN IF EXISTS cover_image_url")
