@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import SQLModel, select, or_
 from app.database import get_session
 from app.models.attendee import Attendee
+from app.models.attendee_revocation import AttendeeRevocation
 from app.models.event import Event
 from app.models.user import User
 from app.routers.auth import get_current_user
@@ -13,7 +14,7 @@ router = APIRouter(prefix="/activity", tags=["activity"])
 
 
 class ActivityItem(SQLModel):
-    type: Literal["registration", "check_in"]
+    type: Literal["registration", "check_in", "revocation"]
     attendee_name: str
     event_title: str
     timestamp: datetime
@@ -52,6 +53,14 @@ async def recent_activity(
         .limit(needed)
     )).all()
 
+    revoke_rows = (await session.execute(
+        select(AttendeeRevocation.attendee_name, AttendeeRevocation.revoked_at, Event.title)
+        .join(Event, Event.id == AttendeeRevocation.event_id)
+        .where(scope)
+        .order_by(AttendeeRevocation.revoked_at.desc())
+        .limit(needed)
+    )).all()
+
     def _utc(dt: datetime) -> datetime:
         return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
@@ -71,6 +80,14 @@ async def recent_activity(
             attendee_name=row.full_name or row.email,
             event_title=row.title,
             timestamp=_utc(row.checked_in_at),
+        ))
+
+    for row in revoke_rows:
+        all_items.append(ActivityItem(
+            type="revocation",
+            attendee_name=row.attendee_name,
+            event_title=row.title,
+            timestamp=_utc(row.revoked_at),
         ))
 
     all_items.sort(key=lambda x: x.timestamp, reverse=True)

@@ -9,6 +9,7 @@ from sqlmodel import SQLModel, select
 
 from app.database import get_session
 from app.models.attendee import Attendee, TicketTier
+from app.models.attendee_revocation import AttendeeRevocation
 from app.models.event import Event
 from app.models.user import User
 from app.routers.auth import get_current_user
@@ -110,6 +111,11 @@ async def revoke_attendee(
     name = attendee.full_name or ""
     event_title = event.title if event else "the event"
 
+    session.add(AttendeeRevocation(
+        event_id=attendee.event_id,
+        attendee_name=name or email,
+        attendee_email=email,
+    ))
     await session.delete(attendee)
     await session.commit()
 
