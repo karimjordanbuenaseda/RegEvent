@@ -171,4 +171,4 @@ async def revoke_attendee(
 
     background_tasks.add_task(send_revoke_email, to=email, name=name, event_title=event_title)
     if had_won:
-        background_tasks.add_task(send_prize_revoke_email, email, name, event_title, won_prize)
+        background_tasks.add_task(send_prize_revoke_email, email, name, event_title, won_prize, reason="event cancellation")

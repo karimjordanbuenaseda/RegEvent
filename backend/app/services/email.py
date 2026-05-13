@@ -200,7 +200,7 @@ def _build_winner_html(name: str, event_title: str, prize_title: str | None) -> 
 </html>"""
 
 
-def _build_prize_revoke_html(name: str, event_title: str, prize_title: str | None) -> str:
+def _build_prize_revoke_html(name: str, event_title: str, prize_title: str | None, reason: str | None) -> str:
     display_name = name or "there"
     primary = "#81A6C6"
     accent = "#AACDDC"
@@ -230,7 +230,7 @@ def _build_prize_revoke_html(name: str, event_title: str, prize_title: str | Non
             <td style="padding:36px 40px 28px;">
               <p style="margin:0 0 16px;font-size:16px;color:#374151;">Hi <strong>{display_name}</strong>,</p>
               <p style="margin:0 0 16px;font-size:15px;color:#6b7280;line-height:1.6;">
-                We're writing to let you know that your prize award at <strong>{event_title}</strong> has been <strong>revoked</strong> by the event organizer.
+                We're writing to let you know that your prize award at <strong>{event_title}</strong> has been <strong>revoked{f" due to {reason}" if reason else ""}</strong> by the event organizer.
               </p>
               {prize_line}
               <p style="margin:0;font-size:14px;color:#9ca3af;line-height:1.6;">
@@ -253,7 +253,7 @@ def _build_prize_revoke_html(name: str, event_title: str, prize_title: str | Non
 </html>"""
 
 
-async def send_prize_revoke_email(to: str, name: str, event_title: str, prize_title: str | None = None) -> None:
+async def send_prize_revoke_email(to: str, name: str, event_title: str, prize_title: str | None = None, reason: str | None = None) -> None:
     smtp_host = os.environ.get("SMTP_HOST", "mailpit")
     smtp_port = int(os.environ.get("SMTP_PORT", "1025"))
     smtp_user = os.environ.get("SMTP_USER", "") or None
@@ -267,7 +267,7 @@ async def send_prize_revoke_email(to: str, name: str, event_title: str, prize_ti
     msg["From"] = smtp_from
     msg["To"] = to
 
-    msg.attach(MIMEText(_build_prize_revoke_html(name, event_title, prize_title), "html"))
+    msg.attach(MIMEText(_build_prize_revoke_html(name, event_title, prize_title, reason), "html"))
 
     send_kwargs: dict = dict(
         hostname=smtp_host,
