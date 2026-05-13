@@ -10,7 +10,9 @@ from sqlmodel import SQLModel, select
 from app.database import get_session
 from app.models.attendee import Attendee, TicketTier
 from app.models.event import Event
-from app.services.email import send_checkin_email
+from app.models.user import User
+from app.routers.auth import get_current_user
+from app.services.email import send_checkin_email, send_revoke_email
 
 router = APIRouter(prefix="/attendees", tags=["attendees"])
 
@@ -82,3 +84,33 @@ async def check_in(attendee_id: UUID, session: AsyncSession = Depends(get_sessio
     await session.commit()
     await session.refresh(attendee)
     return attendee
+
+
+@router.delete("/{attendee_id}", status_code=204)
+async def revoke_attendee(
+    attendee_id: UUID,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    attendee = (
+        await session.execute(select(Attendee).where(Attendee.id == attendee_id))
+    ).scalars().first()
+    if not attendee:
+        raise HTTPException(status_code=404, detail="Attendee not found")
+
+    event = (
+        await session.execute(select(Event).where(Event.id == attendee.event_id))
+    ).scalars().first()
+
+    if event and event.owner_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    email = attendee.email
+    name = attendee.full_name or ""
+    event_title = event.title if event else "the event"
+
+    await session.delete(attendee)
+    await session.commit()
+
+    background_tasks.add_task(send_revoke_email, to=email, name=name, event_title=event_title)
