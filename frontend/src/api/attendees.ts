@@ -54,3 +54,7 @@ export function inviteAttendee(payload: AttendeeCreate): Promise<Attendee> {
     body: JSON.stringify(payload),
   })
 }
+
+export function revokeAttendee(attendeeId: string): Promise<void> {
+  return apiFetch<void>(`/attendees/${attendeeId}`, { method: 'DELETE' })
+}

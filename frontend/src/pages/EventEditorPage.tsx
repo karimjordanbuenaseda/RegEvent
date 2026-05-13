@@ -4,7 +4,7 @@ import TopNav from '../components/TopNav'
 import { useEditorStore } from '../store/editorStore'
 import { uploadEventCover } from '../api/uploads'
 import type { ComponentType } from '../api/eventLayouts'
-import { listAttendees, inviteAttendee } from '../api/attendees'
+import { listAttendees, inviteAttendee, revokeAttendee } from '../api/attendees'
 import type { Attendee, TicketTier } from '../api/attendees'
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -424,6 +424,79 @@ function CanvasPanel() {
   )
 }
 
+// ─── attendee row ─────────────────────────────────────────────────────────────
+
+function AttendeeRow({ attendee: a, onRevoked }: { attendee: Attendee; onRevoked: () => void }) {
+  const [confirming, setConfirming] = useState(false)
+  const [revoking, setRevoking] = useState(false)
+
+  async function handleRevoke() {
+    setRevoking(true)
+    try {
+      await revokeAttendee(a.id)
+      onRevoked()
+    } catch {
+      setRevoking(false)
+      setConfirming(false)
+    }
+  }
+
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-2 bg-red-50 rounded-lg px-3 py-2 border border-red-200">
+        <p className="text-xs text-red-600 flex-1 truncate">
+          Revoke <strong>{a.full_name || a.email}</strong>?
+        </p>
+        <button
+          onClick={() => setConfirming(false)}
+          disabled={revoking}
+          className="text-[10px] px-2 py-1 rounded border border-gray-300 text-gray-500 hover:bg-white disabled:opacity-40 transition-colors shrink-0"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleRevoke}
+          disabled={revoking}
+          className="text-[10px] px-2 py-1 rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-60 transition-colors shrink-0"
+        >
+          {revoking ? '…' : 'Revoke'}
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-2.5 bg-white rounded-lg px-3 py-2 border border-[#D2C4B4] group">
+      <div className="w-7 h-7 rounded-full bg-[#81A6C6]/20 flex items-center justify-center text-[10px] font-semibold text-[#81A6C6] shrink-0">
+        {(a.full_name || a.email)[0].toUpperCase()}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-medium text-gray-800 truncate">{a.full_name || a.email}</p>
+        {a.full_name && <p className="text-[10px] text-gray-400 truncate">{a.email}</p>}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-col items-end gap-0.5">
+          <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full ${
+            a.check_in_status ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
+          }`}>
+            {a.check_in_status ? 'Checked in' : 'Registered'}
+          </span>
+          <span className="text-[9px] text-gray-300">{a.ticket_tier}</span>
+        </div>
+        <button
+          onClick={() => setConfirming(true)}
+          className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-full flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition-all"
+          title="Revoke invite"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── attendees panel ──────────────────────────────────────────────────────────
 
 function AttendeesPanel({ eventId }: { eventId: string }) {
@@ -530,23 +603,7 @@ function AttendeesPanel({ eventId }: { eventId: string }) {
       ) : (
         <div className="flex flex-col gap-1.5">
           {attendees.map((a) => (
-            <div key={a.id} className="flex items-center gap-2.5 bg-white rounded-lg px-3 py-2 border border-[#D2C4B4]">
-              <div className="w-7 h-7 rounded-full bg-[#81A6C6]/20 flex items-center justify-center text-[10px] font-semibold text-[#81A6C6] shrink-0">
-                {(a.full_name || a.email)[0].toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-gray-800 truncate">{a.full_name || a.email}</p>
-                {a.full_name && <p className="text-[10px] text-gray-400 truncate">{a.email}</p>}
-              </div>
-              <div className="flex flex-col items-end gap-0.5 shrink-0">
-                <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full ${
-                  a.check_in_status ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
-                }`}>
-                  {a.check_in_status ? 'Checked in' : 'Registered'}
-                </span>
-                <span className="text-[9px] text-gray-300">{a.ticket_tier}</span>
-              </div>
-            </div>
+            <AttendeeRow key={a.id} attendee={a} onRevoked={reload} />
           ))}
         </div>
       )}
