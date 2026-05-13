@@ -25,16 +25,28 @@ class ActivityPage(SQLModel):
     has_next: bool
 
 
-@router.get("/recent", response_model=ActivityPage)
+@router.get(
+    "/recent",
+    response_model=ActivityPage,
+    summary="Recent activity feed",
+    description=(
+        "Paginated, chronologically sorted list of recent activity items across all events "
+        "owned by the current user. Each item is one of: `registration` (new attendee), "
+        "`check_in` (attendee checked in), or `revocation` (attendee removed). "
+        "Admins see activity across all events."
+    ),
+    response_description="A page of activity items and a `has_next` flag indicating further pages",
+    responses={
+        401: {"description": "Missing, expired, or invalid Bearer token"},
+    },
+)
 async def recent_activity(
-    page: int = Query(1, ge=1),
-    limit: int = Query(15, ge=1, le=50),
+    page: int = Query(1, ge=1, description="Page number (1-based)"),
+    limit: int = Query(15, ge=1, le=50, description="Number of items per page (max 50)"),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
     scope = or_(Event.owner_id == current_user.id, current_user.role == "admin")
-    # Fetch enough rows from each source to cover the requested page plus one
-    # extra (to detect whether a next page exists).
     needed = page * limit + 1
 
     reg_rows = (await session.execute(

@@ -39,7 +39,19 @@ async def get_current_user(
     return user
 
 
-@router.post("/login")
+@router.post(
+    "/login",
+    summary="Authenticate",
+    description=(
+        "Exchange email/password credentials for a short-lived JWT Bearer token (8 hours). "
+        "Pass `username` as the account email address. "
+        "Use the returned `access_token` in the `Authorization: Bearer <token>` header for all protected endpoints."
+    ),
+    response_description="JWT access token and token type (`bearer`)",
+    responses={
+        401: {"description": "Incorrect email or password, or account is inactive"},
+    },
+)
 async def login(
     form: OAuth2PasswordRequestForm = Depends(),
     session: AsyncSession = Depends(get_session),
@@ -61,6 +73,15 @@ async def login(
     return {"access_token": token, "token_type": "bearer"}
 
 
-@router.get("/me", response_model=UserPublic)
+@router.get(
+    "/me",
+    response_model=UserPublic,
+    summary="Current user",
+    description="Return the public profile of the currently authenticated user.",
+    response_description="Authenticated user's public profile",
+    responses={
+        401: {"description": "Missing, expired, or invalid Bearer token"},
+    },
+)
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user

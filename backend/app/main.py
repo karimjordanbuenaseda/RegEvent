@@ -12,7 +12,15 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="RegEvent API", lifespan=lifespan)
+app = FastAPI(
+    title="RegEvent API",
+    version="1.0.0",
+    description=(
+        "REST API for RegEvent — event registration, check-in, raffle draws, and event management. "
+        "Authenticate via **POST /auth/login** (username = email), then click **Authorize** to attach the Bearer token."
+    ),
+    lifespan=lifespan,
+)
 
 app.add_middleware(
     CORSMiddleware,

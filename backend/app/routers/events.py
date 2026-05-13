@@ -6,7 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import field_validator
 from sqlalchemy import delete as sa_delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import SQLModel, select, or_
+from sqlmodel import SQLModel, Field, select, or_
 
 from app.database import get_session
 from app.models.attendee import Attendee
@@ -20,12 +20,12 @@ router = APIRouter(prefix="/events", tags=["events"])
 
 
 class EventCreate(SQLModel):
-    title: str
-    slug: str
-    start_date: datetime
-    is_active: bool = True
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    title: str = Field(description="Display name for the event")
+    slug: str = Field(description="URL-safe identifier used in event URLs (e.g. `my-event-2026`)")
+    start_date: datetime = Field(description="Event start date and time (ISO 8601)")
+    is_active: bool = Field(default=True, description="Whether the event is publicly visible and accepting registrations")
+    latitude: Optional[float] = Field(default=None, description="Venue latitude coordinate")
+    longitude: Optional[float] = Field(default=None, description="Venue longitude coordinate")
 
     @field_validator('start_date', mode='after')
     @classmethod
@@ -34,12 +34,12 @@ class EventCreate(SQLModel):
 
 
 class EventUpdate(SQLModel):
-    title: Optional[str] = None
-    slug: Optional[str] = None
-    start_date: Optional[datetime] = None
-    is_active: Optional[bool] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    title: Optional[str] = Field(default=None, description="Display name for the event")
+    slug: Optional[str] = Field(default=None, description="URL-safe identifier used in event URLs")
+    start_date: Optional[datetime] = Field(default=None, description="Event start date and time (ISO 8601)")
+    is_active: Optional[bool] = Field(default=None, description="Whether the event is publicly visible")
+    latitude: Optional[float] = Field(default=None, description="Venue latitude coordinate")
+    longitude: Optional[float] = Field(default=None, description="Venue longitude coordinate")
 
     @field_validator('start_date', mode='after')
     @classmethod
@@ -49,7 +49,20 @@ class EventUpdate(SQLModel):
         return v.replace(tzinfo=None) if v.tzinfo else v
 
 
-@router.get("/me", response_model=list[EventWithStats])
+@router.get(
+    "/me",
+    response_model=list[EventWithStats],
+    summary="My events",
+    description=(
+        "List all events owned by the current user, enriched with aggregated stats: "
+        "total registered attendees, check-in count, cover image URL, and brand colors. "
+        "Results are ordered by start date descending. Admins see all events."
+    ),
+    response_description="Array of events with attendee stats and branding metadata",
+    responses={
+        401: {"description": "Missing, expired, or invalid Bearer token"},
+    },
+)
 async def list_my_events(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
@@ -85,13 +98,28 @@ async def list_my_events(
     ]
 
 
-@router.get("/", response_model=list[Event])
+@router.get(
+    "/",
+    response_model=list[Event],
+    summary="List all events",
+    description="Public endpoint — returns all events regardless of owner or active status.",
+    response_description="Array of all event records",
+)
 async def list_events(session: AsyncSession = Depends(get_session)):
     result = await session.execute(select(Event))
     return result.scalars().all()
 
 
-@router.get("/{slug}", response_model=Event)
+@router.get(
+    "/{slug}",
+    response_model=Event,
+    summary="Get event by slug",
+    description="Public endpoint — retrieve a single event matched by its URL slug.",
+    response_description="Event record",
+    responses={
+        404: {"description": "No event found with the given slug"},
+    },
+)
 async def get_event(slug: str, session: AsyncSession = Depends(get_session)):
     result = await session.execute(select(Event).where(Event.slug == slug))
     event = result.scalars().first()
@@ -100,7 +128,17 @@ async def get_event(slug: str, session: AsyncSession = Depends(get_session)):
     return event
 
 
-@router.post("/", response_model=Event, status_code=201)
+@router.post(
+    "/",
+    response_model=Event,
+    status_code=201,
+    summary="Create event",
+    description="Create a new event owned by the currently authenticated user.",
+    response_description="The newly created event record",
+    responses={
+        401: {"description": "Missing, expired, or invalid Bearer token"},
+    },
+)
 async def create_event(
     payload: EventCreate,
     current_user: User = Depends(get_current_user),
@@ -113,7 +151,17 @@ async def create_event(
     return event
 
 
-@router.patch("/{event_id}", response_model=Event)
+@router.patch(
+    "/{event_id}",
+    response_model=Event,
+    summary="Update event",
+    description="Partially update an event's fields. Only the event owner or an admin may update.",
+    response_description="Updated event record",
+    responses={
+        403: {"description": "Authenticated user does not own this event"},
+        404: {"description": "Event not found"},
+    },
+)
 async def update_event(
     event_id: UUID,
     payload: EventUpdate,
@@ -133,7 +181,21 @@ async def update_event(
     return event
 
 
-@router.delete("/{event_id}", status_code=204)
+@router.delete(
+    "/{event_id}",
+    status_code=204,
+    summary="Delete event",
+    description=(
+        "Permanently delete an event and cascade-delete all its attendees and layout. "
+        "A cancellation email is sent to every previously registered attendee as a background task. "
+        "Only the event owner or an admin may delete."
+    ),
+    response_description="No content",
+    responses={
+        403: {"description": "Authenticated user does not own this event"},
+        404: {"description": "Event not found"},
+    },
+)
 async def delete_event(
     event_id: UUID,
     background_tasks: BackgroundTasks,
@@ -162,7 +224,23 @@ async def delete_event(
         background_tasks.add_task(send_cancellation_email, row.email, row.full_name or "", event_title)
 
 
-@router.post("/{event_id}/duplicate", response_model=Event, status_code=201)
+@router.post(
+    "/{event_id}/duplicate",
+    response_model=Event,
+    status_code=201,
+    summary="Duplicate event",
+    description=(
+        "Create a copy of an existing event. The duplicate gets title suffixed with `(Copy)` "
+        "and a unique slug suffixed with `-copy` (or `-copy-2`, `-copy-3`, etc. if taken). "
+        "The page layout is copied but attendees are not. The duplicate is inactive by default. "
+        "Only the event owner or an admin may duplicate."
+    ),
+    response_description="The newly created duplicate event",
+    responses={
+        403: {"description": "Authenticated user does not own this event"},
+        404: {"description": "Source event not found"},
+    },
+)
 async def duplicate_event(
     event_id: UUID,
     current_user: User = Depends(get_current_user),

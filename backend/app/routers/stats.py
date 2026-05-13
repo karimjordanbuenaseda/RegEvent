@@ -12,19 +12,30 @@ from app.routers.auth import get_current_user
 router = APIRouter(prefix="/stats", tags=["stats"])
 
 
-@router.get("/dashboard")
+@router.get(
+    "/dashboard",
+    summary="Dashboard statistics",
+    description=(
+        "Aggregated counts scoped to the authenticated user: active live events, "
+        "total registered attendees, and total prizes awarded. "
+        "Admins receive counts across all events regardless of ownership."
+    ),
+    response_description="Object with `total_live_events`, `total_attendees`, and `total_prizes_awarded`",
+    responses={
+        401: {"description": "Missing, expired, or invalid Bearer token"},
+    },
+)
 async def dashboard_stats(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    
     role = current_user.role
 
     total_live_events = await session.scalar(
         select(func.count(Event.id)).where(
            Event.is_active == True,
             or_(
-                role == "admin", 
+                role == "admin",
                 Event.owner_id == current_user.id
             )
         )

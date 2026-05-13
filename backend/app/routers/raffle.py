@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import SQLModel, select
+from sqlmodel import SQLModel, Field, select
 
 from app.database import get_session
 from app.models.attendee import Attendee, TicketTier
@@ -22,15 +22,31 @@ TICKET_WEIGHTS = {TicketTier.VIP: 3, TicketTier.GENERAL: 1}
 
 
 class PrizeCreate(SQLModel):
-    title: str
-    quantity: int
-    draw_order: Optional[int] = None
+    title: str = Field(description="Display name of the prize (e.g. `Grand Prize — iPhone 16`)")
+    quantity: int = Field(description="Number of units available for this prize")
+    draw_order: Optional[int] = Field(default=None, description="Position in the draw sequence (1 = first). Omit to append at the end.")
 
 
 class PrizeUpdate(SQLModel):
-    title: Optional[str] = None
-    quantity: Optional[int] = None
-    draw_order: Optional[int] = None
+    title: Optional[str] = Field(default=None, description="Updated prize title")
+    quantity: Optional[int] = Field(default=None, description="Updated quantity")
+    draw_order: Optional[int] = Field(default=None, description="Updated draw order position")
+
+
+class DrawRequest(SQLModel):
+    eligibility: Literal["checked_in", "registered", "both"] = Field(
+        default="checked_in",
+        description=(
+            "`checked_in` — only attendees who have checked in; "
+            "`registered` — all registered attendees; "
+            "`both` — same as `registered` (alias)"
+        ),
+    )
+    prize_id: Optional[UUID] = Field(default=None, description="UUID of the prize being drawn. If provided, the prize title is recorded on the winner.")
+    include_winners: bool = Field(
+        default=False,
+        description="If `true`, attendees who have already won are included in the eligible pool. Defaults to `false`.",
+    )
 
 
 async def _get_owned_event(event_id: UUID, current_user: User, session: AsyncSession) -> Event:
@@ -42,7 +58,17 @@ async def _get_owned_event(event_id: UUID, current_user: User, session: AsyncSes
     return event
 
 
-@router.get("/{event_id}/prizes", response_model=list[Prize])
+@router.get(
+    "/{event_id}/prizes",
+    response_model=list[Prize],
+    summary="List prizes",
+    description="Return all prizes defined for the event, ordered by `draw_order` ascending.",
+    response_description="Array of prize records",
+    responses={
+        403: {"description": "Authenticated user does not own this event"},
+        404: {"description": "Event not found"},
+    },
+)
 async def list_prizes(
     event_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -55,7 +81,21 @@ async def list_prizes(
     return result.scalars().all()
 
 
-@router.post("/{event_id}/prizes", response_model=Prize, status_code=201)
+@router.post(
+    "/{event_id}/prizes",
+    response_model=Prize,
+    status_code=201,
+    summary="Create prize",
+    description=(
+        "Add a new prize to an event's raffle. "
+        "If `draw_order` is omitted the prize is appended at the end of the draw sequence."
+    ),
+    response_description="Newly created prize",
+    responses={
+        403: {"description": "Authenticated user does not own this event"},
+        404: {"description": "Event not found"},
+    },
+)
 async def create_prize(
     event_id: UUID,
     payload: PrizeCreate,
@@ -79,7 +119,17 @@ async def create_prize(
     return prize
 
 
-@router.patch("/{event_id}/prizes/{prize_id}", response_model=Prize)
+@router.patch(
+    "/{event_id}/prizes/{prize_id}",
+    response_model=Prize,
+    summary="Update prize",
+    description="Partially update a prize's title, quantity, or draw order position.",
+    response_description="Updated prize record",
+    responses={
+        403: {"description": "Authenticated user does not own this event"},
+        404: {"description": "Prize not found"},
+    },
+)
 async def update_prize(
     event_id: UUID,
     prize_id: UUID,
@@ -101,7 +151,17 @@ async def update_prize(
     return prize
 
 
-@router.delete("/{event_id}/prizes/{prize_id}", status_code=204)
+@router.delete(
+    "/{event_id}/prizes/{prize_id}",
+    status_code=204,
+    summary="Delete prize",
+    description="Permanently remove a prize from an event's raffle.",
+    response_description="No content",
+    responses={
+        403: {"description": "Authenticated user does not own this event"},
+        404: {"description": "Prize not found"},
+    },
+)
 async def delete_prize(
     event_id: UUID,
     prize_id: UUID,
@@ -118,13 +178,24 @@ async def delete_prize(
     await session.commit()
 
 
-class DrawRequest(SQLModel):
-    eligibility: Literal["checked_in", "registered", "both"] = "checked_in"
-    prize_id: Optional[UUID] = None
-    include_winners: bool = False
-
-
-@router.post("/{event_id}/draw", response_model=Attendee)
+@router.post(
+    "/{event_id}/draw",
+    response_model=Attendee,
+    summary="Draw a raffle winner",
+    description=(
+        "Randomly select one eligible attendee as a raffle winner using ticket-tier weighting "
+        "(VIP = 3×, General = 1×). "
+        "The winner's record is updated with `has_won=true`, `won_at` (UTC timestamp), and `prize_title`. "
+        "A winner notification email is sent as a background task. "
+        "`SELECT FOR UPDATE` row-level locking prevents duplicate wins under concurrent draw requests."
+    ),
+    response_description="The winning attendee record with `has_won=true`",
+    responses={
+        403: {"description": "Authenticated user does not own this event"},
+        404: {"description": "Event not found"},
+        409: {"description": "No eligible attendees available for this draw"},
+    },
+)
 async def draw_winner(
     event_id: UUID,
     payload: DrawRequest,
@@ -179,7 +250,17 @@ async def draw_winner(
     return winner
 
 
-@router.get("/{event_id}/winners", response_model=list[Attendee])
+@router.get(
+    "/{event_id}/winners",
+    response_model=list[Attendee],
+    summary="List winners",
+    description="Return all attendees who have won a raffle for this event, ordered by most recent win first.",
+    response_description="Array of winning attendee records with `has_won=true`",
+    responses={
+        403: {"description": "Authenticated user does not own this event"},
+        404: {"description": "Event not found"},
+    },
+)
 async def list_winners(
     event_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -194,7 +275,21 @@ async def list_winners(
     return result.scalars().all()
 
 
-@router.post("/{event_id}/winners/{attendee_id}/revoke", response_model=Attendee)
+@router.post(
+    "/{event_id}/winners/{attendee_id}/revoke",
+    response_model=Attendee,
+    summary="Revoke winner",
+    description=(
+        "Clear the win status of an attendee (`has_won=false`, `won_at=null`, `prize_title=null`), "
+        "making them eligible for future draws again. "
+        "A prize revocation email is sent to the attendee as a background task."
+    ),
+    response_description="Updated attendee record with win status cleared",
+    responses={
+        403: {"description": "Authenticated user does not own this event"},
+        404: {"description": "Winner not found"},
+    },
+)
 async def revoke_winner(
     event_id: UUID,
     attendee_id: UUID,

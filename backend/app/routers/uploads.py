@@ -18,10 +18,27 @@ _EXT = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gi
 _MAX_BYTES = 5 * 1024 * 1024
 
 
-@router.post("/events/{event_id}/cover")
+@router.post(
+    "/events/{event_id}/cover",
+    summary="Upload event cover image",
+    description=(
+        "Upload a cover image for an event's landing page. "
+        "The image is stored in MinIO object storage at `events/{event_id}/cover.{ext}` "
+        "and the public URL is saved to the event's layout record. "
+        "If a previous cover of a different format exists it is deleted. "
+        "Accepted formats: JPEG, PNG, WebP, GIF. Maximum file size: 5 MB. "
+        "Only the event owner or an admin may upload."
+    ),
+    response_description="Object containing `url` — the public URL of the uploaded cover image",
+    responses={
+        400: {"description": "Unsupported image type or file exceeds 5 MB"},
+        403: {"description": "Authenticated user does not own this event"},
+        404: {"description": "Event not found"},
+    },
+)
 async def upload_event_cover(
     event_id: UUID,
-    file: UploadFile = File(...),
+    file: UploadFile = File(..., description="Image file to upload (JPEG, PNG, WebP, or GIF, max 5 MB)"),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
