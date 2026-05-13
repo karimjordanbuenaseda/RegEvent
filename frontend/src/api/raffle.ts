@@ -25,9 +25,11 @@ export interface RaffleWinner {
   event_id: string
   email: string
   full_name: string | null
-  ticket_tier: 'general' | 'vip'
+  ticket_tier: 'General' | 'VIP'
   check_in_status: boolean
   has_won: boolean
+  won_at: string | null
+  prize_title: string | null
 }
 
 export function listPrizes(eventId: string): Promise<Prize[]> {
@@ -46,6 +48,20 @@ export function deletePrize(eventId: string, prizeId: string): Promise<void> {
   return apiFetch<void>(`/raffle/${eventId}/prizes/${prizeId}`, { method: 'DELETE' })
 }
 
-export function drawWinner(eventId: string): Promise<RaffleWinner> {
-  return apiFetch<RaffleWinner>(`/raffle/${eventId}/draw`, { method: 'POST' })
+export interface DrawRequest {
+  eligibility: 'checked_in' | 'registered' | 'both'
+  prize_id?: string
+  include_winners?: boolean
+}
+
+export function drawWinner(eventId: string, req: DrawRequest): Promise<RaffleWinner> {
+  return apiFetch<RaffleWinner>(`/raffle/${eventId}/draw`, { method: 'POST', body: JSON.stringify(req) })
+}
+
+export function listWinners(eventId: string): Promise<RaffleWinner[]> {
+  return apiFetch<RaffleWinner[]>(`/raffle/${eventId}/winners`)
+}
+
+export function revokeWinner(eventId: string, attendeeId: string): Promise<RaffleWinner> {
+  return apiFetch<RaffleWinner>(`/raffle/${eventId}/winners/${attendeeId}/revoke`, { method: 'POST' })
 }

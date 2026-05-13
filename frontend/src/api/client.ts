@@ -1,5 +1,12 @@
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
+export class ApiError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('access_token')
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -12,7 +19,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   })
   if (!res.ok) {
     const error = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(error.detail ?? 'Request failed')
+    throw new ApiError(res.status, error.detail ?? 'Request failed')
   }
   if (res.status === 204 || res.headers.get('content-length') === '0') {
     return undefined as T
