@@ -82,6 +82,8 @@ Separates presentation data from business data for the dynamic page builder.
 | `has_won` | Boolean | default `False` |
 | `created_at` | DateTime | Auto-set on creation (UTC) |
 | `checked_in_at` | DateTime | Optional — set when `check_in_status` becomes `True` |
+| `won_at` | DateTime (tz-aware) | Optional — set at draw time (UTC) |
+| `prize_title` | String | Optional — snapshot of the prize name at draw time |
 
 ---
 
@@ -98,12 +100,28 @@ Separates presentation data from business data for the dynamic page builder.
 
 ---
 
+### F. AttendeeRevocation Model
+Audit record created when an attendee registration is revoked by an event owner or admin. The attendee row is deleted; this record preserves the history.
+
+**Table:** `attendeerevocation`
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | UUID | Primary Key |
+| `event_id` | UUID | Foreign Key → `event.id`, indexed |
+| `attendee_name` | String | Snapshot of name at revocation time |
+| `attendee_email` | String | Snapshot of email at revocation time |
+| `revoked_at` | DateTime | Auto-set on creation (UTC) |
+
+---
+
 ## 3. Model Connections (ERD)
 
 * **User (1) → Event (N):** A user owns and manages one or more events (`owner_id` FK on Event).
 * **Event (1) → EventLayout (N):** An event can have one active layout or multiple versioned layouts.
 * **Event (1) → Attendee (N):** Standard registration relationship.
 * **Event (1) → Prize (N):** Defines the prize pool for a specific event.
+* **Event (1) → AttendeeRevocation (N):** Audit log of revoked registrations for an event.
 
 ---
 
@@ -118,7 +136,7 @@ All routers are mounted in `app/main.py`. Base path prefix is defined per router
 | `events.py` | `/events` | `events` | List, create, update, delete events; `/me` for owned events |
 | `event_layouts.py` | `/event-layouts` | `event-layouts` | CRUD for `EventLayout`; create, list, patch, delete |
 | `attendees.py` | `/attendees` | `attendees` | Register attendees, lookup by ID, check-in patch |
-| `raffle.py` | `/raffle` | `raffle` | `POST /{event_id}/draw` — weighted raffle draw |
+| `raffle.py` | `/raffle` | `raffle` | Prize CRUD; configurable weighted draw; winner list and revocation |
 | `uploads.py` | `/uploads` | `uploads` | `POST /events/{event_id}/cover` — cover image upload to MinIO |
 | `stats.py` | `/stats` | `stats` | `GET /dashboard` — aggregate counts scoped to current user |
 | `activity.py` | `/activity` | `activity` | `GET /recent` — paginated feed of registrations and check-ins |
@@ -140,17 +158,35 @@ All routers are mounted in `app/main.py`. Base path prefix is defined per router
 * `POST /attendees/` — register a new attendee; triggers a background check-in email via `email.py` service.
 * `GET /attendees/{attendee_id}` — look up a single attendee (used for QR check-in).
 * `PATCH /attendees/{attendee_id}/check-in` — sets `check_in_status = True` and records `checked_in_at`.
+* `DELETE /attendees/{attendee_id}` — revokes a registration (auth required; owner or admin only). Deletes the `Attendee` row, creates an `AttendeeRevocation` audit record, and sends a revocation email as a background task.
+
+### Raffle endpoints
+* `GET /raffle/{event_id}/prizes` — list prizes for an event ordered by `draw_order` (auth required).
+* `POST /raffle/{event_id}/prizes` — create a prize; `draw_order` auto-increments if omitted (auth required).
+* `PATCH /raffle/{event_id}/prizes/{prize_id}` — partial update of a prize (auth required).
+* `DELETE /raffle/{event_id}/prizes/{prize_id}` — delete a prize (auth required).
+* `POST /raffle/{event_id}/draw` — draw a winner (auth required; owner or admin only). Accepts a `DrawRequest` body:
+  * `eligibility`: `"checked_in"` (default) \| `"registered"` \| `"both"`
+  * `prize_id`: optional UUID — if provided, snapshots the prize title onto the winner
+  * `include_winners`: `false` (default) — if `true`, already-won attendees are also eligible
+  * Sets `has_won = True`, `won_at`, and `prize_title` on the winner; sends a winner email as a background task.
+* `GET /raffle/{event_id}/winners` — list all winners for an event ordered by `won_at` descending (auth required).
+* `POST /raffle/{event_id}/winners/{attendee_id}/revoke` — revoke a win: clears `has_won`, `won_at`, and `prize_title`; sends a prize-revoke email as a background task (auth required).
 
 ---
 
 ## 5. Services
 
 ### `services/email.py`
-Sends transactional emails using **aiosmtplib** (async SMTP).
+Sends transactional emails using **aiosmtplib** (async SMTP). All functions are `async` and called as FastAPI `BackgroundTask`s so API responses are never blocked. SMTP credentials and host are read from environment variables.
 
-* `send_checkin_email(to, name, event_title, checkin_url)` — sends a styled HTML email with a "Check In Now" button after a successful registration.
-* SMTP credentials and host are read from environment variables.
-* Called as a FastAPI `BackgroundTask` so registration responses are not blocked.
+| Function | Trigger |
+|---|---|
+| `send_checkin_email(to, name, event_title, checkin_url)` | Attendee self-registers — delivers a styled HTML email with a "Check In Now" button |
+| `send_revoke_email(to, name, event_title)` | Attendee registration is revoked by an admin |
+| `send_winner_email(to, name, event_title, prize_title)` | Attendee is drawn as a raffle winner |
+| `send_prize_revoke_email(to, name, event_title, prize_title)` | A previously awarded win is revoked |
+| `send_cancellation_email(to, name, event_title)` | An event is deleted/cancelled |
 
 ### `services/storage.py`
 Wraps the **MinIO** Python client for object storage.
@@ -171,9 +207,14 @@ Wraps the **MinIO** Python client for object storage.
 4. The React app maps the `structure` array to pre-defined TypeScript components and applies `styles` as CSS variables.
 
 ### The Raffle Transaction
-1. **Locking:** `SELECT` attendees `FOR UPDATE` — filters for `check_in_status = True` and `has_won = False` within the same DB transaction to prevent concurrent draws picking the same winner.
-2. **Weighted selection:** VIP tickets receive **3×** the weight of General tickets (`random.choices`).
-3. **Commit:** Marks `has_won = True` on the winner.
+1. **Auth & ownership check:** `_get_owned_event` verifies the caller is the event owner or an admin.
+2. **Eligibility filter:** Controlled by the `DrawRequest` body:
+   * `eligibility` — `"checked_in"` (default) restricts the pool to checked-in attendees; `"registered"` includes all attendees; `"both"` is equivalent to registered.
+   * `include_winners` — when `false` (default) excludes attendees who have already won.
+3. **Locking:** `SELECT … FOR UPDATE` on the eligible rows prevents concurrent draws from selecting the same winner.
+4. **Weighted selection:** VIP tickets receive **3×** the weight of General tickets (`random.choices`).
+5. **Commit:** Sets `has_won = True`, `won_at` (UTC), and `prize_title` (snapshot) on the winner.
+6. **Notification:** `send_winner_email` is dispatched as a background task after the commit.
 
 ### Event Cover Image Upload
 1. Client calls `POST /uploads/events/{event_id}/cover` with a multipart image (JPEG, PNG, WebP, or GIF; max 5 MB).
