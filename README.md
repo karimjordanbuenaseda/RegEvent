@@ -8,7 +8,7 @@ A mobile-first, full-stack web application for event registration, attendee chec
 - **Self-registration** — attendees register via a public event page and receive a check-in email with a personalized link
 - **Check-in** — scan a QR code or look up attendees manually at the door
 - **Live raffle draws** — real-time WebSocket-powered draws with weighted ticket tiers (VIP gets 3× the chance)
-- **Dashboard** — per-user metrics, live event counts, and a paginated activity feed
+- **Dashboard** — per-user metrics, live event counts, and a paginated activity feed (registrations, check-ins, and revocations)
 
 ---
 
@@ -24,7 +24,7 @@ A mobile-first, full-stack web application for event registration, attendee chec
 | Auth | JWT (HS256, 8-hour expiry), bcrypt passwords |
 | Migrations | Alembic |
 | Dev email | Mailpit (local SMTP catch-all) |
-| Containerization | Docker Compose (6 services) |
+| Containerization | Docker Compose (5 services) |
 
 ---
 
@@ -124,7 +124,7 @@ pytest tests/test_events.py::test_create_event
 |---|---|---|
 | Auth | `/auth` | `POST /login` (OAuth2 form), `GET /me` |
 | Events | `/events` | CRUD; `GET /me` returns stats joined from layout + attendees |
-| Attendees | `/attendees` | Register, look up by ID, `PATCH /{id}/check-in` |
+| Attendees | `/attendees` | Register, look up by ID, `PATCH /{id}/check-in`, `DELETE /{id}` (revoke) |
 | Raffle | `/raffle` | `POST /{event_id}/draw` — row-locked weighted draw |
 | Event Layouts | `/event-layouts` | CRUD for page builder structure and styles (JSONB) |
 | Uploads | `/uploads` | `POST /events/{id}/cover` — image upload to MinIO (max 5 MB) |
@@ -148,6 +148,7 @@ See [BACKEND_ARCHITECTURE.md](BACKEND_ARCHITECTURE.md) for full model and flow d
 | `SMTP_HOST` | SMTP server host |
 | `SMTP_PORT` | SMTP server port |
 | `APP_BASE_URL` | Base URL used in check-in email links |
+| `CORS_ORIGINS` | Comma-separated list of allowed CORS origins (default: `http://localhost:5173`) |
 
 ---
 
@@ -184,13 +185,13 @@ See [FRONTEND_ARCHITECTURE.md](FRONTEND_ARCHITECTURE.md) for component and routi
 
 ## Docker Configuration
 
-Six services are defined in `docker-compose.yml`:
+Five services are defined in `docker-compose.yml`:
 
 | Service | Image / Dockerfile | Ports | Networks |
 |---|---|---|---|
 | `frontend` | `docker/Dockerfile.frontend` (Node 20 Alpine) | 5173 | `web_network` |
 | `backend` | `docker/Dockerfile.backend` (Python 3.12 slim) | 8000 | `web_network`, `db_network` |
-| `db` | `docker/Dockerfile.db` (PostgreSQL) | — (internal) | `db_network` |
+| `db` | `docker/Dockerfile.db` (PostgreSQL) | 5432 (development) | `db_network` |
 | `minio` | `minio/minio:latest` | 9000, 9001 | `db_network` |
 | `mailpit` | `axllent/mailpit:latest` | 1025 (SMTP), 8025 (UI) | `db_network` |
 
