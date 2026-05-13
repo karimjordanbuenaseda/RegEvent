@@ -13,7 +13,7 @@ from app.models.attendee_revocation import AttendeeRevocation
 from app.models.event import Event
 from app.models.user import User
 from app.routers.auth import get_current_user
-from app.services.email import send_checkin_email, send_revoke_email
+from app.services.email import send_checkin_email, send_revoke_email, send_prize_revoke_email
 
 router = APIRouter(prefix="/attendees", tags=["attendees"])
 
@@ -158,6 +158,8 @@ async def revoke_attendee(
     email = attendee.email
     name = attendee.full_name or ""
     event_title = event.title if event else "the event"
+    had_won = attendee.has_won
+    won_prize = attendee.prize_title
 
     session.add(AttendeeRevocation(
         event_id=attendee.event_id,
@@ -168,3 +170,5 @@ async def revoke_attendee(
     await session.commit()
 
     background_tasks.add_task(send_revoke_email, to=email, name=name, event_title=event_title)
+    if had_won:
+        background_tasks.add_task(send_prize_revoke_email, email, name, event_title, won_prize)
