@@ -7,6 +7,8 @@ import { getLayoutsForEvent } from '../api/eventLayouts'
 import type { EventLayout, ComponentType } from '../api/eventLayouts'
 import { registerAttendee } from '../api/attendees'
 import type { Attendee, TicketTier } from '../api/attendees'
+import { listPrizesPublic } from '../api/raffle'
+import type { Prize } from '../api/raffle'
 
 const DEFAULT_PRIMARY = '#81A6C6'
 const DEFAULT_ACCENT = '#AACDDC'
@@ -121,6 +123,65 @@ function MapSection({ event }: { event: EventBase }) {
         referrerPolicy="no-referrer-when-downgrade"
         title="Event Location"
       />
+    </div>
+  )
+}
+
+// ─── prize list ───────────────────────────────────────────────────────────────
+
+function PrizeListSection({ event, layout }: { event: EventBase; layout: EventLayout | null }) {
+  const primary = layout?.styles?.primary ?? DEFAULT_PRIMARY
+  const [prizes, setPrizes] = useState<Prize[] | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    listPrizesPublic(event.id)
+      .then((p) => { if (!cancelled) setPrizes(p) })
+      .catch(() => { if (!cancelled) setPrizes([]) })
+    return () => { cancelled = true }
+  }, [event.id])
+
+  if (prizes === null || prizes.length === 0) return null
+
+  return (
+    <div className="bg-white px-6 py-6 border-b border-gray-100">
+      <div className="mb-4">
+        <h2 className="text-lg font-bold text-gray-900">Raffle Prizes</h2>
+        <p className="text-sm text-gray-400 mt-0.5">Register to be eligible.</p>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {prizes.map((prize) => (
+          <div
+            key={prize.id}
+            className="flex flex-col rounded-xl border border-gray-100 overflow-hidden bg-white"
+          >
+            <div className="aspect-square w-full bg-gray-50 relative">
+              {prize.image_url ? (
+                <img src={prize.image_url} alt={prize.title} className="absolute inset-0 w-full h-full object-cover" />
+              ) : (
+                <div
+                  className="absolute inset-0 flex items-center justify-center text-2xl font-bold"
+                  style={{ color: primary, background: `${primary}14` }}
+                >
+                  {prize.title.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <span
+                className="absolute top-2 left-2 text-[10px] font-bold w-6 h-6 rounded-full flex items-center justify-center text-white"
+                style={{ background: primary }}
+              >
+                {prize.draw_order}
+              </span>
+            </div>
+            <div className="p-3 flex flex-col gap-1">
+              <p className="text-sm font-semibold text-gray-800 leading-tight truncate" title={prize.title}>
+                {prize.title}
+              </p>
+              <p className="text-[11px] text-gray-400">{prize.quantity} winner{prize.quantity !== 1 ? 's' : ''}</p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -371,6 +432,8 @@ export default function EventRegistrationPage() {
         return <CountdownSection key="countdown" event={event} layout={layout} />
       case 'map':
         return <MapSection key="map" event={event} />
+      case 'prize_list':
+        return <PrizeListSection key="prize_list" event={event} layout={layout} />
       default:
         return null
     }

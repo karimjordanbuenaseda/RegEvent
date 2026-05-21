@@ -6,18 +6,21 @@ export interface Prize {
   title: string
   quantity: number
   draw_order: number
+  image_url?: string | null
 }
 
 export interface PrizeCreate {
   title: string
   quantity: number
   draw_order?: number
+  image_url?: string | null
 }
 
 export interface PrizeUpdate {
   title?: string
   quantity?: number
   draw_order?: number
+  image_url?: string | null
 }
 
 export interface RaffleWinner {
@@ -30,10 +33,15 @@ export interface RaffleWinner {
   has_won: boolean
   won_at: string | null
   prize_title: string | null
+  prize_image_url?: string | null
 }
 
 export function listPrizes(eventId: string): Promise<Prize[]> {
   return apiFetch<Prize[]>(`/raffle/${eventId}/prizes`)
+}
+
+export function listPrizesPublic(eventId: string): Promise<Prize[]> {
+  return apiFetch<Prize[]>(`/raffle/public/${eventId}/prizes`)
 }
 
 export function createPrize(eventId: string, data: PrizeCreate): Promise<Prize> {

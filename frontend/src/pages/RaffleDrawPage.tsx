@@ -239,6 +239,21 @@ export default function RaffleDrawPage() {
       {/* ── Revealed ── */}
       {phase === 'revealed' && winner && (
         <div className="flex flex-col items-center gap-8 w-full max-w-md">
+          {/* Prize image */}
+          {winner.prize_image_url && (
+            <img
+              src={winner.prize_image_url}
+              alt={winner.prize_title ?? 'Prize'}
+              className="rounded-2xl object-cover border border-slate-700 shadow-lg"
+              style={{
+                width: 'clamp(160px, 30vw, 240px)',
+                height: 'clamp(160px, 30vw, 240px)',
+                transition: 'box-shadow 0.6s ease',
+                boxShadow: flash ? '0 0 40px rgba(129,166,198,0.55)' : undefined,
+              }}
+            />
+          )}
+
           {/* Winner name */}
           <div className="text-center">
             <p className="text-xs tracking-widest uppercase mb-4" style={{ color: '#81A6C6' }}>
@@ -259,6 +274,13 @@ export default function RaffleDrawPage() {
               </p>
             )}
           </div>
+
+          {/* Prize title */}
+          {winner.prize_title && (
+            <p className="text-base font-semibold text-center" style={{ color: '#f1f5f9' }}>
+              {winner.prize_title}
+            </p>
+          )}
 
           {/* Ticket tier badge */}
           <span

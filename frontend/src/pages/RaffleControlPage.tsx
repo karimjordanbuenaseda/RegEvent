@@ -6,6 +6,8 @@ import { useRaffleStore } from '../store/raffleStore'
 import type { Prize, RaffleWinner } from '../api/raffle'
 import { listWinners, revokeWinner } from '../api/raffle'
 import { listAttendees } from '../api/attendees'
+import { uploadPrizeImage } from '../api/uploads'
+import ImageUpload from '../components/ImageUpload'
 
 // ─── Prize Form ───────────────────────────────────────────────────────────────
 
@@ -23,12 +25,14 @@ function PrizeForm({
   onSave,
   onCancel,
   isSaving,
+  extra,
 }: {
   initial?: PrizeFormValues
   nextOrder: number
   onSave: (values: PrizeFormValues) => void
   onCancel: () => void
   isSaving: boolean
+  extra?: React.ReactNode
 }) {
   const [values, setValues] = useState<PrizeFormValues>(initial ?? { ...emptyForm(), draw_order: String(nextOrder) })
 
@@ -73,6 +77,7 @@ function PrizeForm({
           />
         </div>
       </div>
+      {extra}
       <div className="flex justify-end gap-2">
         <button
           onClick={onCancel}
@@ -107,6 +112,8 @@ function PrizeRow({
   const { editPrize, removePrize } = useRaffleStore()
   const [mode, setMode] = useState<'view' | 'edit' | 'confirm-delete'>('view')
   const [isSaving, setIsSaving] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   async function handleSave(values: PrizeFormValues) {
     setIsSaving(true)
@@ -131,6 +138,19 @@ function PrizeRow({
     }
   }
 
+  async function handleImageFile(file: File) {
+    setIsUploading(true)
+    setUploadError(null)
+    try {
+      const { url } = await uploadPrizeImage(eventId, prize.id, file)
+      await editPrize(eventId, prize.id, { image_url: url })
+    } catch (err) {
+      setUploadError((err as Error).message)
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
   if (mode === 'edit') {
     return (
       <PrizeForm
@@ -139,6 +159,20 @@ function PrizeRow({
         onSave={handleSave}
         onCancel={() => setMode('view')}
         isSaving={isSaving}
+        extra={
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Prize Image</label>
+            <ImageUpload
+              imageUrl={prize.image_url}
+              uploading={isUploading}
+              error={uploadError}
+              onFile={handleImageFile}
+              emptyLabel="Upload Prize Image"
+              replaceLabel="Replace Image"
+              previewClass="w-full h-32 object-cover rounded-xl border border-[#D2C4B4] bg-white"
+            />
+          </div>
+        }
       />
     )
   }
@@ -169,6 +203,11 @@ function PrizeRow({
 
   return (
     <div className="flex items-center gap-3 bg-white rounded-xl border border-[#D2C4B4] px-4 py-3 group">
+      <div
+        className="w-10 h-10 rounded-lg shrink-0 border border-[#D2C4B4] bg-brand-accent/10 bg-cover bg-center"
+        style={prize.image_url ? { backgroundImage: `url(${prize.image_url})` } : undefined}
+        aria-hidden
+      />
       <span className="w-7 h-7 rounded-full bg-brand-accent/30 text-brand-primary text-xs font-bold flex items-center justify-center shrink-0">
         {prize.draw_order}
       </span>
@@ -279,6 +318,7 @@ function PrizeSetupPanel({ eventId }: { eventId: string }) {
           onSave={handleAdd}
           onCancel={() => setShowAddForm(false)}
           isSaving={isSaving}
+          extra={<p className="text-xs text-gray-400">Add an image after saving.</p>}
         />
       )}
 

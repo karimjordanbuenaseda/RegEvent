@@ -1,6 +1,6 @@
 import { apiFetch } from './client'
 
-export type ComponentType = 'hero' | 'registration_form' | 'map' | 'countdown'
+export type ComponentType = 'hero' | 'registration_form' | 'map' | 'countdown' | 'prize_list'
 
 export interface EventLayout {
   id: string

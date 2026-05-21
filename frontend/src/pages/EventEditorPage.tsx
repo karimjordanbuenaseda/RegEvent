@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import TopNav from '../components/TopNav'
+import ImageUpload from '../components/ImageUpload'
 import { useEditorStore } from '../store/editorStore'
 import { uploadEventCover } from '../api/uploads'
 import type { ComponentType } from '../api/eventLayouts'
@@ -14,9 +15,10 @@ const COMP_META: Record<ComponentType, { label: string; description: string }> =
   registration_form: { label: 'Registration Form', description: 'Attendee sign-up form' },
   map:               { label: 'Map',               description: 'Event location & directions' },
   countdown:         { label: 'Countdown',         description: 'Live countdown to event start' },
+  prize_list:        { label: 'Prize List',        description: 'Grid of raffle prizes with images' },
 }
 
-const COMP_ORDER: ComponentType[] = ['hero', 'registration_form', 'map', 'countdown']
+const COMP_ORDER: ComponentType[] = ['hero', 'registration_form', 'map', 'countdown', 'prize_list']
 
 const INPUT_CLS =
   'w-full px-2.5 py-1.5 rounded-lg border border-[#D2C4B4] bg-white text-sm text-gray-800 ' +
@@ -128,7 +130,31 @@ function CompPreview({
   if (type === 'hero') return <HeroPreview styles={styles} coverImageUrl={coverImageUrl} />
   if (type === 'registration_form') return <RegFormPreview styles={styles} />
   if (type === 'map') return <MapPreview />
+  if (type === 'prize_list') return <PrizeListPreview styles={styles} />
   return <CountdownPreview styles={styles} />
+}
+
+function PrizeListPreview({ styles }: { styles: { primary: string; accent: string } }) {
+  return (
+    <div className="w-full h-36 px-4 py-3 flex flex-col gap-2 bg-white">
+      <div className="flex flex-col gap-0.5">
+        <div className="h-3 w-24 rounded" style={{ background: styles.primary, opacity: 0.7 }} />
+        <div className="h-2 w-16 rounded bg-gray-200" />
+      </div>
+      <div className="grid grid-cols-3 gap-1.5 flex-1">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="rounded-md border border-gray-100 flex flex-col"
+            style={{ background: `${styles.accent}1f` }}
+          >
+            <div className="flex-1" style={{ background: `${styles.primary}22` }} />
+            <div className="h-2.5 m-1 rounded bg-gray-200" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -615,14 +641,12 @@ function AttendeesPanel({ eventId }: { eventId: string }) {
 
 function RightPanel() {
   const { styles, setStyle, coverImageUrl, setCoverImageUrl, eventId } = useEditorStore()
-  const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'design' | 'attendees'>('design')
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !eventId) return
+  const handleCoverFile = async (file: File) => {
+    if (!eventId) return
     setUploading(true)
     setUploadError(null)
     try {
@@ -632,7 +656,6 @@ function RightPanel() {
       setUploadError((err as Error).message)
     } finally {
       setUploading(false)
-      if (fileRef.current) fileRef.current.value = ''
     }
   }
 
@@ -694,53 +717,15 @@ function RightPanel() {
           {/* Cover image */}
           <div className="p-5 flex flex-col gap-3">
             <SectionLabel>Cover Image</SectionLabel>
-
-            {!eventId ? (
-              <p className="text-xs text-gray-400 bg-white/60 rounded-xl p-3 border border-[#D2C4B4] leading-relaxed">
-                Save the event first to upload a cover image.
-              </p>
-            ) : coverImageUrl ? (
-              <div className="flex flex-col gap-2">
-                <img
-                  src={coverImageUrl}
-                  alt="Cover"
-                  className="w-full h-32 object-cover rounded-xl border border-[#D2C4B4]"
-                />
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  className="text-xs font-medium py-2 rounded-lg border border-[#D2C4B4] bg-white text-gray-600 hover:bg-white/80 transition-colors"
-                >
-                  Replace Image
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-                className="flex flex-col items-center justify-center gap-2 py-8 px-4 rounded-xl border-2 border-dashed border-[#D2C4B4] bg-white/40 hover:bg-white/70 disabled:opacity-60 transition-colors text-gray-400 hover:text-gray-600 w-full"
-              >
-                {uploading ? (
-                  <p className="text-xs">Uploading…</p>
-                ) : (
-                  <>
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M16 8l-4-4-4 4M12 4v12" />
-                    </svg>
-                    <span className="text-xs font-medium">Upload Cover Image</span>
-                    <span className="text-[10px]">JPEG, PNG, WebP · Max 5 MB</span>
-                  </>
-                )}
-              </button>
-            )}
-
-            {uploadError && <p className="text-xs text-red-500">{uploadError}</p>}
-
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              onChange={handleFile}
-              className="hidden"
+            <ImageUpload
+              imageUrl={coverImageUrl}
+              uploading={uploading}
+              error={uploadError}
+              onFile={handleCoverFile}
+              emptyLabel="Upload Cover Image"
+              replaceLabel="Replace Image"
+              disabled={!eventId}
+              disabledMessage="Save the event first to upload a cover image."
             />
           </div>
         </div>
