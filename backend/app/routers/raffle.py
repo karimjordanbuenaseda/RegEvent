@@ -25,12 +25,30 @@ class PrizeCreate(SQLModel):
     title: str = Field(description="Display name of the prize (e.g. `Grand Prize — iPhone 16`)")
     quantity: int = Field(description="Number of units available for this prize")
     draw_order: Optional[int] = Field(default=None, description="Position in the draw sequence (1 = first). Omit to append at the end.")
+    image_url: Optional[str] = Field(default=None, description="Public URL of the prize image. Usually populated by the upload endpoint rather than directly.")
 
 
 class PrizeUpdate(SQLModel):
     title: Optional[str] = Field(default=None, description="Updated prize title")
     quantity: Optional[int] = Field(default=None, description="Updated quantity")
     draw_order: Optional[int] = Field(default=None, description="Updated draw order position")
+    image_url: Optional[str] = Field(default=None, description="Updated prize image URL")
+
+
+class DrawWinner(SQLModel):
+    """Draw response: the winning Attendee plus the prize image URL (not persisted on the attendee)."""
+    id: UUID
+    event_id: UUID
+    full_name: Optional[str] = None
+    email: str
+    ticket_tier: TicketTier
+    check_in_status: bool
+    has_won: bool
+    created_at: datetime
+    checked_in_at: Optional[datetime] = None
+    won_at: Optional[datetime] = None
+    prize_title: Optional[str] = None
+    prize_image_url: Optional[str] = None
 
 
 class DrawRequest(SQLModel):
@@ -81,6 +99,31 @@ async def list_prizes(
     return result.scalars().all()
 
 
+@router.get(
+    "/public/{event_id}/prizes",
+    response_model=list[Prize],
+    summary="List prizes (public)",
+    description=(
+        "Public, unauthenticated list of prizes for an event. "
+        "Intended for the event's public registration page to display the prize lineup. "
+        "Ordered by `draw_order` ascending."
+    ),
+    response_description="Array of prize records",
+    responses={404: {"description": "Event not found"}},
+)
+async def list_prizes_public(
+    event_id: UUID,
+    session: AsyncSession = Depends(get_session),
+):
+    event = (await session.execute(select(Event).where(Event.id == event_id))).scalars().first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    result = await session.execute(
+        select(Prize).where(Prize.event_id == event_id).order_by(Prize.draw_order)
+    )
+    return result.scalars().all()
+
+
 @router.post(
     "/{event_id}/prizes",
     response_model=Prize,
@@ -112,7 +155,13 @@ async def create_prize(
     else:
         draw_order = payload.draw_order
 
-    prize = Prize(event_id=event_id, title=payload.title, quantity=payload.quantity, draw_order=draw_order)
+    prize = Prize(
+        event_id=event_id,
+        title=payload.title,
+        quantity=payload.quantity,
+        draw_order=draw_order,
+        image_url=payload.image_url,
+    )
     session.add(prize)
     await session.commit()
     await session.refresh(prize)
@@ -180,7 +229,7 @@ async def delete_prize(
 
 @router.post(
     "/{event_id}/draw",
-    response_model=Attendee,
+    response_model=DrawWinner,
     summary="Draw a raffle winner",
     description=(
         "Randomly select one eligible attendee as a raffle winner using ticket-tier weighting "
@@ -206,12 +255,14 @@ async def draw_winner(
     event = await _get_owned_event(event_id, current_user, session)
 
     prize_title: str | None = None
+    prize_image_url: str | None = None
     if payload.prize_id:
         prize = (await session.execute(
             select(Prize).where(Prize.id == payload.prize_id, Prize.event_id == event_id)
         )).scalars().first()
         if prize:
             prize_title = prize.title
+            prize_image_url = prize.image_url
 
     # Lock eligible rows within the already-active transaction (autobegin).
     # session.begin() must NOT be called here — a transaction is already open
@@ -245,9 +296,13 @@ async def draw_winner(
         winner.full_name or "",
         event.title,
         prize_title,
+        prize_image_url,
     )
 
-    return winner
+    return DrawWinner(
+        **winner.model_dump(),
+        prize_image_url=prize_image_url,
+    )
 
 
 @router.get(

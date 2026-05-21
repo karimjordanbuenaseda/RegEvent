@@ -150,11 +150,19 @@ async def send_revoke_email(to: str, name: str, event_title: str) -> None:
         logger.exception("[email] Failed to send revoke email to %s", to)
 
 
-def _build_winner_html(name: str, event_title: str, prize_title: str | None) -> str:
+def _build_winner_html(name: str, event_title: str, prize_title: str | None, prize_image_url: str | None = None) -> str:
     display_name = name or "there"
     primary = "#81A6C6"
     accent = "#AACDDC"
     prize_line = f"<p style='margin:0 0 8px;font-size:15px;color:#374151;'>Prize: <strong>{prize_title}</strong></p>" if prize_title else ""
+    prize_image = (
+        f"<table cellpadding='0' cellspacing='0' style='margin:0 auto 16px;'>"
+        f"<tr><td align='center'>"
+        f"<img src='{prize_image_url}' alt='{prize_title or 'Prize'}' "
+        f"style='display:block;max-width:240px;width:100%;height:auto;border-radius:12px;border:1px solid #e5e7eb;' />"
+        f"</td></tr></table>"
+        if prize_image_url else ""
+    )
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -179,6 +187,7 @@ def _build_winner_html(name: str, event_title: str, prize_title: str | None) -> 
               <p style="margin:0 0 16px;font-size:15px;color:#6b7280;line-height:1.6;">
                 Congratulations! You've been selected as a <strong>raffle winner</strong> at <strong>{event_title}</strong>.
               </p>
+              {prize_image}
               {prize_line}
               <p style="margin:16px 0 0;font-size:14px;color:#9ca3af;line-height:1.6;">
                 Please present this email to the event organizer as proof of your win.
@@ -287,7 +296,7 @@ async def send_prize_revoke_email(to: str, name: str, event_title: str, prize_ti
         logger.exception("[email] Failed to send prize revoke email to %s", to)
 
 
-async def send_winner_email(to: str, name: str, event_title: str, prize_title: str | None = None) -> None:
+async def send_winner_email(to: str, name: str, event_title: str, prize_title: str | None = None, prize_image_url: str | None = None) -> None:
     smtp_host = os.environ.get("SMTP_HOST", "mailpit")
     smtp_port = int(os.environ.get("SMTP_PORT", "1025"))
     smtp_user = os.environ.get("SMTP_USER", "") or None
@@ -301,7 +310,7 @@ async def send_winner_email(to: str, name: str, event_title: str, prize_title: s
     msg["From"] = smtp_from
     msg["To"] = to
 
-    msg.attach(MIMEText(_build_winner_html(name, event_title, prize_title), "html"))
+    msg.attach(MIMEText(_build_winner_html(name, event_title, prize_title, prize_image_url), "html"))
 
     send_kwargs: dict = dict(
         hostname=smtp_host,
