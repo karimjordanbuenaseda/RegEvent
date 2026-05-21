@@ -8,3 +8,4 @@ class Prize(SQLModel, table=True):
     title: str
     quantity: int
     draw_order: int
+    image_url: str | None = None
